@@ -1,0 +1,8 @@
+{
+  "name": "Horizon",
+  "description": "A recovery app offering daily reflections, interactive sober counters, sentiment charts, breathing pacers, and 12-Step lessons.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
