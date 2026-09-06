@@ -446,9 +446,10 @@ export const ProfileView: React.FC = () => {
       </section>
 
       {/* App License & Version Footer */}
-      <footer className="text-center py-4 text-xs font-sans text-black/40">
+      <footer className="text-center py-4 text-xs font-sans text-black/40 space-y-0.5">
+        <p className="font-medium text-black/50">Horizon v2.1.3</p>
         <p>
-          Horizon • {state.language === 'Español' ? 'Software libre bajo licencia GNU GPLv3' : state.language === 'Português' ? 'Software livre sob licença GNU GPLv3' : 'Free & Open Source Software under GNU GPLv3'}
+          {state.language === 'Español' ? 'Software libre bajo licencia GNU GPLv3' : state.language === 'Português' ? 'Software livre sob licença GNU GPLv3' : 'Free & Open Source Software under GNU GPLv3'}
         </p>
       </footer>
     </div>
