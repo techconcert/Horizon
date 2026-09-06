@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Anonymous sync backups indexed by unique recovery sync code
+    match /sync_backups/{syncCode} {
+      allow read, write: if syncCode.size() >= 4 && syncCode.size() <= 32;
+    }
+  }
+}

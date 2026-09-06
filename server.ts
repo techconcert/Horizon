@@ -77,8 +77,10 @@ app.post('/api/ai/intention', async (req, res) => {
     // Fallback if Gemini key is missing OR if rate limit has been exceeded
     return res.json({
       intention: language === 'Spanish' || language === 'Español'
-        ? `Me doy permiso para respirar hondo, liberar la tensión y dar la bienvenida al equilibrio.`
-        : `I give myself permission to take a deep breath, release tension, and welcome balance.`,
+        ? `Sólo por hoy, me doy permiso para respirar hondo, liberar la tensión y dar la bienvenida al equilibrio.`
+        : language === 'Portuguese' || language === 'Português'
+        ? `Só por hoje, dou-me permissão para respirar fundo, libertar a tensão e acolher o equilíbrio.`
+        : `Just for today, I give myself permission to take a deep breath, release tension, and welcome balance.`,
       limitReached: !isAllowed,
       currentCount: Math.min(currentCount, 3)
     });
@@ -88,6 +90,10 @@ app.post('/api/ai/intention', async (req, res) => {
     const systemPrompt = `You are a serene, highly-compassionate mindfulness and recovery guide for a digital sanctuary app.
 Based on the user's current mood, generate a single, elegant, comforting daily intention or mantra.
 The mantra should be short (1 sentence), powerful, deeply grounded, and reassuring.
+When possible, start the focus message with:
+- "Just for today, ..." (if language is English)
+- "Sólo por hoy, ..." (if language is Spanish / Español)
+- "Só por hoje, ..." (if language is Portuguese / Português)
 Do NOT use sales pitchy words, self-praising jargon, or cheesy language. Keep it very quiet and meditative.
 Generate the response strictly in the requested language: ${language || 'English'}.
 Do NOT output anything other than the single sentence mantra itself. No quotes, no markdown wrappers.`;
@@ -126,6 +132,8 @@ app.post('/api/ai/insights', async (req, res) => {
     return res.json({
       insights: language === 'Spanish' || language === 'Español'
         ? `Tus reflexiones de la tarde reflejan un espacio de conexión y calma. Sigue priorizando tu rutina matutina y tu meditación.`
+        : language === 'Portuguese' || language === 'Português'
+        ? `As suas reflexões da tarde refletem um espaço de conexão e serenidade. Continue a priorizar os seus rituais matinais e exercícios de respiração.`
         : `Your afternoon reflections show a quiet space of connection and calm. Keep prioritizing your morning rituals and breathing exercises.`,
       limitReached: !isAllowed || !ai,
       currentCount: Math.min(currentCount, 3)
@@ -174,8 +182,30 @@ async function setupServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+
+    // Never cache service worker or index.html to ensure PWA clients always receive current updates
+    app.use((req, res, next) => {
+      if (req.path === '/sw.js' || req.path === '/' || req.path === '/index.html') {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+      next();
+    });
+
+    app.use(express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('sw.js')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      }
+    }));
+
+    // Prevent SPA fallback for missing JS/CSS chunks so browsers don't execute HTML as JS
+    app.all('/assets/*', (req, res) => {
+      res.status(404).setHeader('Cache-Control', 'no-store').send('Asset not found');
+    });
+
     app.get('*', (req, res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

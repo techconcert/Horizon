@@ -203,8 +203,7 @@ export const TrackersView: React.FC = () => {
     limitReached,
     addReflection,
     deleteReflection,
-    addCustomMood,
-    seed90DaysData
+    addCustomMood
   } = useSanctuary();
   const getText = (en: string, es: string, pt: string) => {
     if (state.language === 'English') return en;
@@ -405,9 +404,9 @@ export const TrackersView: React.FC = () => {
         Português: '24/7 Nacional'
       },
       your_intention: {
-        English: 'Your Serenity Intention',
-        Español: 'Tu Intención de Serenidad',
-        Português: 'Sua Intenção de Serenidade'
+        English: 'Serenity Prayer',
+        Español: 'Oración de la Serenidad',
+        Português: 'Oração da Serenidade'
       },
       serenity_prayer: {
         English: '"God, grant me the serenity to accept the things I cannot change, courage to change the things I can, and wisdom to know the difference."',
@@ -415,9 +414,9 @@ export const TrackersView: React.FC = () => {
         Português: '"Deus, concedei-me a serenidade para aceitar as coisas que não posso mudar, coragem para mudar as que posso, e sabedoria para saber a diferença."'
       },
       close_portal: {
-        English: 'Close Horizon Portal',
-        Español: 'Cerrar Portal',
-        Português: 'Fechar Portal'
+        English: 'Close',
+        Español: 'Cerrar',
+        Português: 'Fechar'
       }
     };
     return lexicon[key]?.[lang] || key;

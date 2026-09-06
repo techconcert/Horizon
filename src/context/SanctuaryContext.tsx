@@ -6,6 +6,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { TabType, MoodType, Reflection, Step, SubLesson, SanctuaryState } from '../types';
 import { INITIAL_STEPS } from '../lessons';
+import { 
+  getOrCreateSyncCode, 
+  saveToCloud, 
+  restoreFromCloud, 
+  exportLocalStateToCloudPayload, 
+  writePayloadToLocalStorage, 
+  normalizeSyncCode 
+} from '../services/cloudSync';
 
 interface SanctuaryContextType {
   state: SanctuaryState;
@@ -37,44 +45,13 @@ interface SanctuaryContextType {
   setSponsorNumber: (val: string) => void;
   setSupportLink: (val: string) => void;
   setOnboarded: (onboarded: boolean) => void;
-  seed90DaysData: () => void;
+  syncCode: string;
+  lastCloudSync: string | null;
+  syncToCloud: () => Promise<boolean>;
+  restoreFromSyncCode: (code: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const SanctuaryContext = createContext<SanctuaryContextType | undefined>(undefined);
-
-// Helper to calculate initial start date representing 1 year, 2 months, 15 days ago
-const getInitialSoberDate = () => {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - 1);
-  d.setMonth(d.getMonth() - 2);
-  d.setDate(d.getDate() - 15);
-  d.setHours(d.getHours() - 12); // add 12 hours
-  return d.toISOString();
-};
-
-const DEFAULT_REFLECTIONS: Reflection[] = [
-  {
-    id: '1',
-    date: new Date().toISOString(), // Today
-    title: 'Evening Reflection',
-    content: 'Reflecting on my interactions today, I realized I reacted defensively during a meeting. Admitting it quickly helped defuse the situation. I feel grounded now.',
-    moods: ['Calm', 'Content'],
-  },
-  {
-    id: '2',
-    date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
-    title: 'Midday Check-in',
-    content: 'Felt a surge of anxiety regarding an upcoming deadline. Took a moment to step back and apply the Serenity Prayer. Need to focus on what I can control.',
-    moods: ['Anxious'],
-  },
-  {
-    id: '3',
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago (placeholder for Oct 24 style)
-    title: 'Morning Review',
-    content: 'Woke up feeling overwhelmed by commitments. Started prioritizing and making amends for double-booking myself. Learning to say no.',
-    moods: ['Overwhelmed', 'Tired'],
-  }
-];
 
 const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português', string>> = {
   'app_title': { English: 'Horizon', Español: 'Horizon', Português: 'Horizon' },
@@ -131,6 +108,8 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'morning_gratitude': { English: 'Morning Gratitude', Español: 'Gratitud de la mañana', Português: 'Gratidão matinal' },
   'morning_grat_desc': { English: 'Align your intentions for the day with a gentle focus on what you have.', Español: 'Alinea tus intenciones del día enfocándote suavemente en lo que tienes.', Português: 'Alinhe suas intenções do dia com um foco suave naquilo que você tem.' },
   'serenity_prayer': { English: 'Serenity Prayer', Español: 'Oración de la Serenidad', Português: 'Oração da Serenidade' },
+  'your_intention': { English: 'Serenity Prayer', Español: 'Oración de la Serenidad', Português: 'Oração da Serenidade' },
+  'close': { English: 'Close', Español: 'Cerrar', Português: 'Fechar' },
   'serenity_desc': { English: 'A classic meditation on acceptance, courage, and wisdom.', Español: 'Una meditación clásica sobre la aceptación, el valor y la sabiduría.', Português: 'Uma meditação clássica sobre aceitação, coragem e sabedoria.' },
   'evening_release': { English: 'Evening Release', Español: 'Descarga nocturna', Português: 'Descarrego noturno' },
   'evening_desc': { English: "Let go of the day's burdens before finding rest.", Español: 'Suelta las cargas del día antes de descansar.', Português: 'Solte as cargas do dia antes de descansar.' },
@@ -175,8 +154,14 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'ai_remaining_credits': { English: 'Daily Credits Used', Español: 'Créditos diarios usados', Português: 'Créditos diários usados' },
 };
 
-export const calculateTimeGrounded = (startDateStr: string) => {
+export const calculateTimeGrounded = (startDateStr?: string | null) => {
+  if (!startDateStr) {
+    return { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, totalHours: 0, totalDays: 0 };
+  }
   const start = new Date(startDateStr);
+  if (isNaN(start.getTime())) {
+    return { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, totalHours: 0, totalDays: 0 };
+  }
   const now = new Date();
   let diffMs = now.getTime() - start.getTime();
   if (diffMs < 0) diffMs = 0;
@@ -205,10 +190,16 @@ export const calculateTimeGrounded = (startDateStr: string) => {
 };
 
 export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load state from local storage or default values
+  const [onboarded, setOnboardedState] = useState<boolean>(() => {
+    return localStorage.getItem('onboarded') === 'true';
+  });
+
+  // Sobriety date is based on onboarding entry or firestore import only (blank by default)
   const [sobrietyStartDate, setSobrietyStartDateState] = useState<string>(() => {
-    const saved = localStorage.getItem('sobrietyStartDate');
-    return saved || getInitialSoberDate();
+    if (localStorage.getItem('onboarded') !== 'true') {
+      return '';
+    }
+    return localStorage.getItem('sobrietyStartDate') || '';
   });
 
   const [reflections, setReflections] = useState<Reflection[]>(() => {
@@ -298,8 +289,9 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return localStorage.getItem('supportLink') || '';
   });
 
-  const [onboarded, setOnboardedState] = useState<boolean>(() => {
-    return localStorage.getItem('onboarded') === 'true';
+  const [syncCode, setSyncCode] = useState<string>(() => getOrCreateSyncCode());
+  const [lastCloudSync, setLastCloudSync] = useState<string | null>(() => {
+    return localStorage.getItem('horizon_last_cloud_sync') || null;
   });
 
   const [aiLoading, setAiLoading] = useState<boolean>(false);
@@ -337,7 +329,11 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Sync state values to local storage
   useEffect(() => {
-    localStorage.setItem('sobrietyStartDate', sobrietyStartDate);
+    if (sobrietyStartDate) {
+      localStorage.setItem('sobrietyStartDate', sobrietyStartDate);
+    } else {
+      localStorage.removeItem('sobrietyStartDate');
+    }
   }, [sobrietyStartDate]);
 
   useEffect(() => {
@@ -425,6 +421,11 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const setCurrentLessonId = (id: string | null) => setCurrentLessonIdState(id);
   const setSobrietyStartDate = (date: string) => {
     setSobrietyStartDateState(date);
+    if (date) {
+      localStorage.setItem('sobrietyStartDate', date);
+    } else {
+      localStorage.removeItem('sobrietyStartDate');
+    }
     setTimeGroundedString(calculateTimeGrounded(date));
   };
   const setLanguage = (lang: 'English' | 'Español' | 'Português') => setLanguageState(lang);
@@ -545,37 +546,58 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const generateAIIntention = async (mood: MoodType): Promise<string> => {
     const today = new Date().toISOString().split('T')[0];
     
+    const fallbackEnglish: Record<MoodType, string> = {
+      Calm: 'Just for today, I align myself with the quiet stillness of the present moment.',
+      Content: 'Just for today, I appreciate the simple blessings that are right in front of me.',
+      Joyful: 'Just for today, I radiate positivity and embrace the happiness of being clean.',
+      Hopeful: 'Just for today, I trust that my path of recovery is leading me to a beautiful future.',
+      Peaceful: 'Just for today, I release all anxiety and welcome the soft calm into my spirit.',
+      Grateful: 'Just for today, I give deep thanks for my progress, my sanctuary, and my community.',
+      Anxious: 'Just for today, I give myself permission to rest, to reset, and to begin again without judgment.',
+      Frustrated: 'Just for today, I accept that I cannot control everything, and I let go of expectations.',
+      Overwhelmed: 'Just for today, I take this day one single breath at a time. I am where I need to be.',
+      Tired: 'Just for today, I listen to my body and allow myself gentle rest and rejuvenation.',
+      Lonely: 'Just for today, I remember I am connected to a community of healing, and I am never alone.',
+      Angry: 'Just for today, I breathe out anger and allow patience and understanding to fill the space.'
+    };
+    const fallbackSpanish: Record<MoodType, string> = {
+      Calm: 'Sólo por hoy, me alineo con la quietud pacífica del momento presente.',
+      Content: 'Sólo por hoy, aprecio las bendiciones sencillas que están justo frente a mí.',
+      Joyful: 'Sólo por hoy, irradio positividad y abrazo la felicidad de estar limpio.',
+      Hopeful: 'Sólo por hoy, confío en que mi camino de recuperación me lleva a un futuro hermoso.',
+      Peaceful: 'Sólo por hoy, libero toda ansiedad y doy la bienvenida a la suave calma en mi espíritu.',
+      Grateful: 'Sólo por hoy, doy profundas gracias por mi progreso, mi santuario y mi comunidad.',
+      Anxious: 'Sólo por hoy, me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.',
+      Frustrated: 'Sólo por hoy, acepto que no puedo controlarlo todo y dejo ir las expectativas.',
+      Overwhelmed: 'Sólo por hoy, tomo este día una sola respiración a la vez. Estoy donde necesito estar.',
+      Tired: 'Sólo por hoy, escucho a mi cuerpo y me permito un descanso suave y rejuvenecimiento.',
+      Lonely: 'Sólo por hoy, recuerdo que estoy conectado a una comunidad de sanación, nunca estoy solo.',
+      Angry: 'Sólo por hoy, exhalo la ira y permito que la paciencia y la comprensión llenen el espacio.'
+    };
+    const fallbackPortuguese: Record<MoodType, string> = {
+      Calm: 'Só por hoje, alinho-me com a quietude serena do momento presente.',
+      Content: 'Só por hoje, aprecio as bênçãos simples que estão bem à minha frente.',
+      Joyful: 'Só por hoje, irradio positividade e acolho a alegria de viver limpo.',
+      Hopeful: 'Só por hoje, confio que o meu caminho de recuperação me conduz a um futuro luminoso.',
+      Peaceful: 'Só por hoje, liberto toda a ansiedade e acolho a calma suave no meu espírito.',
+      Grateful: 'Só por hoje, agradeço profundamente pelo meu progresso, pelo meu santuário e pela comunidade.',
+      Anxious: 'Só por hoje, dou-me permissão para descansar, reiniciar e recomeçar sem julgamento.',
+      Frustrated: 'Só por hoje, aceito que não posso controlar tudo e desapego-me das expetativas.',
+      Overwhelmed: 'Só por hoje, vivo este dia uma respiração de cada vez. Estou onde preciso estar.',
+      Tired: 'Só por hoje, escuto o meu corpo e permito-me um repouso gentil e renovador.',
+      Lonely: 'Só por hoje, lembro-me de que estou ligado a uma irmandade de cura e nunca estou sozinho.',
+      Angry: 'Só por hoje, solto a raiva e permito que a paciência e a compreensão ocupem o seu lugar.'
+    };
+
+    const getLocalFallback = () => {
+      if (language === 'English') return fallbackEnglish[mood];
+      if (language === 'Español') return fallbackSpanish[mood];
+      return fallbackPortuguese[mood];
+    };
+
     // Check local limit first
     if (aiUsage.date === today && aiUsage.count >= 3) {
-      const fallbackEnglish: Record<MoodType, string> = {
-        Calm: 'I align myself with the quiet stillness of the present moment.',
-        Content: 'I appreciate the simple blessings that are right in front of me.',
-        Joyful: 'I radiate positivity and embrace the happiness of being clean.',
-        Hopeful: 'I trust that my path of recovery is leading me to a beautiful future.',
-        Peaceful: 'I release all anxiety and welcome the soft calm into my spirit.',
-        Grateful: 'I give deep thanks for my progress, my sanctuary, and my community.',
-        Anxious: 'I give myself permission to rest, to reset, and to begin again without judgment.',
-        Frustrated: 'I accept that I cannot control everything, and I let go of expectations.',
-        Overwhelmed: 'I take this day one single breath at a time. I am where I need to be.',
-        Tired: 'I listen to my body and allow myself gentle rest and rejuvenation.',
-        Lonely: 'I am connected to a larger community of healing, and I am never truly alone.',
-        Angry: 'I breathe out anger and allow patience and understanding to fill the space.'
-      };
-      const fallbackSpanish: Record<MoodType, string> = {
-        Calm: 'Me alineo con la quietud pacífica del momento presente.',
-        Content: 'Aprecio las bendiciones sencillas que están justo frente a mí.',
-        Joyful: 'Irradio positividad y abrazo la felicidad de estar limpio.',
-        Hopeful: 'Confío en que mi camino de recuperación me lleva a un futuro hermoso.',
-        Peaceful: 'Libero toda ansiedad y doy la bienvenida a la suave calma en mi espíritu.',
-        Grateful: 'Doy profundas gracias por mi progreso, mi santuario y mi comunidad.',
-        Anxious: 'Me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.',
-        Frustrated: 'Acepto que no puedo controlarlo todo y dejo ir las expectativas.',
-        Overwhelmed: 'Tomo este día una sola respiración a la vez. Estoy donde necesito estar.',
-        Tired: 'Escucho a mi cuerpo y me permito un descanso suave y rejuvenecimiento.',
-        Lonely: 'Estoy conectado a una comunidad de sanación más grande, nunca estoy solo.',
-        Angry: 'Exhalo la ira y permito que la paciencia y la comprensión llenen el espacio.'
-      };
-      return language === 'English' ? fallbackEnglish[mood] : fallbackSpanish[mood];
+      return getLocalFallback();
     }
 
     setAiLoading(true);
@@ -599,35 +621,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.error(e);
       // Fallback local intentions matching the serene theme
       setAiUsage(prev => ({ date: today, count: Math.min(prev.count + 1, 3) }));
-      const fallbackEnglish: Record<MoodType, string> = {
-        Calm: 'I align myself with the quiet stillness of the present moment.',
-        Content: 'I appreciate the simple blessings that are right in front of me.',
-        Joyful: 'I radiate positivity and embrace the happiness of being clean.',
-        Hopeful: 'I trust that my path of recovery is leading me to a beautiful future.',
-        Peaceful: 'I release all anxiety and welcome the soft calm into my spirit.',
-        Grateful: 'I give deep thanks for my progress, my sanctuary, and my community.',
-        Anxious: 'I give myself permission to rest, to reset, and to begin again without judgment.',
-        Frustrated: 'I accept that I cannot control everything, and I let go of expectations.',
-        Overwhelmed: 'I take this day one single breath at a time. I am where I need to be.',
-        Tired: 'I listen to my body and allow myself gentle rest and rejuvenation.',
-        Lonely: 'I am connected to a larger community of healing, and I am never truly alone.',
-        Angry: 'I breathe out anger and allow patience and understanding to fill the space.'
-      };
-      const fallbackSpanish: Record<MoodType, string> = {
-        Calm: 'Me alineo con la quietud pacífica del momento presente.',
-        Content: 'Aprecio las bendiciones sencillas que están justo frente a mí.',
-        Joyful: 'Irradio positividad y abrazo la felicidad de estar limpio.',
-        Hopeful: 'Confío en que mi camino de recuperación me lleva a un futuro hermoso.',
-        Peaceful: 'Libero toda ansiedad y doy la bienvenida a la suave calma en mi espíritu.',
-        Grateful: 'Doy profundas gracias por mi progreso, mi santuario y mi comunidad.',
-        Anxious: 'Me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.',
-        Frustrated: 'Acepto que no puedo controlarlo todo y dejo ir las expectativas.',
-        Overwhelmed: 'Tomo este día una sola respiración a la vez. Estoy donde necesito estar.',
-        Tired: 'Escucho a mi cuerpo y me permito un descanso suave y rejuvenecimiento.',
-        Lonely: 'Estoy conectado a una comunidad de sanación más grande, nunca estoy solo.',
-        Angry: 'Exhalo la ira y permito que la paciencia y la comprensión llenen el espacio.'
-      };
-      return language === 'English' ? fallbackEnglish[mood] : fallbackSpanish[mood];
+      return getLocalFallback();
     } finally {
       setAiLoading(false);
     }
@@ -640,6 +634,8 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (aiUsage.date === today && aiUsage.count >= 3) {
       if (language === 'English') {
         return `You have felt 15% more Calm this week compared to last. Afternoon reflections show higher levels of Contentment. Keep prioritizing your boundaries and daily meditation.`;
+      } else if (language === 'Português') {
+        return `Sentiu-se 15% mais calmo esta semana em comparação com a anterior. As reflexões da tarde mostram níveis mais elevados de serenidade. Continue a priorizar os seus limites e a meditação diária.`;
       } else {
         return `Te has sentido un 15% más calmado esta semana en comparación con la anterior. Las reflexiones de la tarde muestran niveles más altos de satisfacción. Sigue priorizando tus límites y la meditación diaria.`;
       }
@@ -667,6 +663,8 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setAiUsage(prev => ({ date: today, count: Math.min(prev.count + 1, 3) }));
       if (language === 'English') {
         return `You have felt 15% more Calm this week compared to last. Afternoon reflections show higher levels of Contentment. Keep prioritizing your boundaries and daily meditation.`;
+      } else if (language === 'Português') {
+        return `Sentiu-se 15% mais calmo esta semana em comparação com a anterior. As reflexões da tarde mostram níveis mais elevados de serenidade. Continue a priorizar os seus limites e a meditação diária.`;
       } else {
         return `Te has sentido un 15% más calmado esta semana en comparación con la anterior. Las reflexiones de la tarde muestran niveles más altos de satisfacción. Sigue priorizando tus límites y la meditación diaria.`;
       }
@@ -677,173 +675,77 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const isLimitReached = aiUsage.date === new Date().toISOString().split('T')[0] && aiUsage.count >= 3;
 
-  const seed90DaysData = () => {
-    // 1. Erase custom moods
-    setCustomMoods([]);
-    localStorage.removeItem('customMoods');
-
-    // 2. Generate 90 days of random reflections
-    const generatedReflections: Reflection[] = [];
-    const now = new Date();
-    
-    const positiveMoods: MoodType[] = ['Calm', 'Content', 'Joyful', 'Hopeful', 'Peaceful', 'Grateful'];
-    const negativeMoods: MoodType[] = ['Anxious', 'Frustrated', 'Overwhelmed', 'Angry', 'Tired', 'Lonely'];
-    
-    const positiveScenarios = [
-      {
-        title: { English: 'Morning Serenity', Español: 'Serenidad Matutina', Português: 'Serenidade Matinal' },
-        content: {
-          English: 'Felt a deep sense of serenity during my morning meditation. The path of recovery is clear and I feel extremely motivated today.',
-          Español: 'Sentí una profunda sensación de serenidad durante mi meditación matutina. El camino de la recuperación es claro y me siento muy motivado hoy.',
-          Português: 'Senti uma profunda sensação de serenidade durante a minha meditação matinal. O caminho da recuperação está claro e me sinto muito motivado hoje.'
-        }
-      },
-      {
-        title: { English: 'Fellowship Connection', Español: 'Conexión con el Grupo', Português: 'Conexão com o Grupo' },
-        content: {
-          English: 'Attended an awesome local fellowship meeting today. Sharing and listening reminded me of how blessed and supported I am in this sanctuary.',
-          Español: 'Asistí a una reunión increíble hoy. Compartir y escuchar me recordó lo afortunado y apoyado que estoy en este santuario.',
-          Português: 'Participei de uma reunião incrível hoje. Compartilhar e ouvir me lembrou o quanto sou abençoado e apoiado neste santuário.'
-        }
-      },
-      {
-        title: { English: 'Step Work Accomplished', Español: 'Paso Completado', Português: 'Passo Concluído' },
-        content: {
-          English: 'Spent time reading step literature. Admitting powerlessness is helping me release control and find a peaceful frame of mind.',
-          Español: 'Pasé tiempo leyendo literatura sobre los pasos. Admitir la impotencia me está ayudando a liberar el control y encontrar paz mental.',
-          Português: 'Passei um tempo lendo a literatura dos passos. Admitir a impotência está me ajudando a liberar o controle e encontrar paz mental.'
-        }
-      },
-      {
-        title: { English: 'Sponsor Talk', Español: 'Charla con el Padrino', Português: 'Conversa com o Padrinho' },
-        content: {
-          English: 'Connected with my sponsor today. We discussed the weight of expectations and it was highly relieving. Feeling secure and strong.',
-          Español: 'Me conecté con mi padrino hoy. Discutimos el peso de las expectativas y fue un gran alivio. Me siento seguro y fuerte.',
-          Português: 'Falei com meu padrinho hoje. Conversamos sobre o peso das expectativas e foi um grande alívio. Sinto-me seguro e forte.'
-        }
-      },
-      {
-        title: { English: 'Nature Walk', Español: 'Paseo por la Naturaleza', Português: 'Caminhada na Natureza' },
-        content: {
-          English: 'Went for a peaceful walk this afternoon. Taking things one day at a time keeps my mind bright and full of genuine gratitude.',
-          Español: 'Fui a dar un paseo tranquilo esta tarde. Tomar las cosas un día a la vez mantiene mi mente despejada y llena de gratitud genuina.',
-          Português: 'Fiz uma caminhada tranquila esta tarde. Viver um dia de cada vez mantém minha mente limpa e cheia de gratidão genuína.'
-        }
+  const syncToCloud = async (): Promise<boolean> => {
+    try {
+      const payload = exportLocalStateToCloudPayload();
+      const res = await saveToCloud(syncCode, payload);
+      if (res.success) {
+        const now = new Date().toISOString();
+        setLastCloudSync(now);
+        return true;
       }
-    ];
+      return false;
+    } catch {
+      return false;
+    }
+  };
 
-    const negativeScenarios = [
-      {
-        title: { English: 'Stressed and Exhausted', Español: 'Estresado y Agotado', Português: 'Estressado e Esgotado' },
-        content: {
-          English: 'Had a challenging and exhausting day with work deadlines. Felt anxious and tired, but focused on what I can control.',
-          Español: 'Tuve un día desafiante y agotador con plazos de trabajo. Me sentí ansioso y cansado, pero me enfoqué en lo que puedo controlar.',
-          Português: 'Tive um dia desafiador e exaustivo com prazos de trabalho. Senti-me ansioso e cansado, mas foquei no que posso controlar.'
-        }
-      },
-      {
-        title: { English: 'Slightly Restless', Español: 'Un Poco Inquieto', Português: 'Um Pouco Inquieto' },
-        content: {
-          English: 'Woke up feeling somewhat restless and frustrated. Did some deep breathing exercises to ground myself and release the negative tension.',
-          Español: 'Me desperté sintiéndome un poco inquieto y frustrado. Hice algunos ejercicios de respiración profunda para conectarme y liberar la tensión.',
-          Português: 'Acordei me sentindo um pouco inquieto e frustrado. Fiz alguns exercícios de respiração profunda para me conectar e liberar a tensão.'
-        }
-      },
-      {
-        title: { English: 'Lonely Evening Thoughts', Español: 'Pensamientos de Soledad', Português: 'Pensamentos de Solidão' },
-        content: {
-          English: 'Struggled with empty and lonely feelings tonight. Reached out to a fellowship friend which helped defuse the emotional spiral.',
-          Español: 'Luché con sentimientos de vacío y soledad esta noche. Me puse en contacto con un amigo del grupo, lo que ayudó a calmar la espiral emocional.',
-          Português: 'Lutei com sentimentos de vazio e solidão esta noite. Entrei em contato com um amigo do grupo, o que ajudou a acalmar a espiral emocional.'
-        }
-      },
-      {
-        title: { English: 'Overwhelming Commitments', Español: 'Compromisos Abrumadores', Português: 'Compromissos Excessivos' },
-        content: {
-          English: 'Felt very overwhelmed and panicky about my progress today. Paused to pray and surrender. Learning to protect my boundaries.',
-          Español: 'Me sentí muy abrumado y asustado por mi progreso hoy. Me detuve a orar y rendirme. Aprendiendo a proteger mis límites.',
-          Português: 'Senti-me muito sobrecarregado e assustado com o meu progresso hoje. Parei para orar e me render. Aprendendo a proteger meus limites.'
-        }
-      },
-      {
-        title: { English: 'Dealing with Old Triggers', Español: 'Lidiando con Desencadenantes', Português: 'Lidando com Gatilhos' },
-        content: {
-          English: 'Encountered some old triggers and felt a flash of anger and frustration. So glad I stayed safe and applied my daily recovery tools.',
-          Español: 'Encontré algunos desencadenantes viejos y sentí un destello de ira y frustración. Muy feliz de haberme mantenido a salvo y usar mis herramientas.',
-          Português: 'Encontrei alguns gatilhos antigos e senti um lampejo de raiva e frustração. Muito feliz por ter me mantido seguro e usado minhas ferramentas.'
-        }
+  const restoreFromSyncCode = async (code: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await restoreFromCloud(code);
+      if (!res.success || !res.data) {
+        return { success: false, error: res.error || 'Sync code not found' };
       }
-    ];
+      const data = res.data;
+      writePayloadToLocalStorage(data, code);
 
-    for (let i = 0; i < 90; i++) {
-      const d = new Date();
-      d.setDate(now.getDate() - i);
-      
-      // Generate up to 3 entries for this day (1 to 3 entries)
-      const numEntries = Math.floor(Math.random() * 3) + 1;
-      
-      for (let j = 0; j < numEntries; j++) {
-        const isPositive = Math.random() < 0.65;
-        
-        let moodsToLog: MoodType[] = [];
-        let title = '';
-        let content = '';
-        
-        if (isPositive) {
-          const primary = positiveMoods[Math.floor(Math.random() * positiveMoods.length)];
-          const moods = [primary];
-          
-          // Add 1 or 2 more moods to test multiple moods per entry
-          const extraCount = Math.floor(Math.random() * 2) + 1; // 1 or 2 extra moods
-          for (let k = 0; k < extraCount; k++) {
-            const pool = [...positiveMoods, ...negativeMoods];
-            const extra = pool[Math.floor(Math.random() * pool.length)] as MoodType;
-            if (!moods.includes(extra)) {
-              moods.push(extra);
-            }
-          }
-          moodsToLog = moods;
-          
-          const scenario = positiveScenarios[Math.floor(Math.random() * positiveScenarios.length)];
-          title = scenario.title[language] || scenario.title.English;
-          content = scenario.content[language] || scenario.content.English;
-        } else {
-          const primary = negativeMoods[Math.floor(Math.random() * negativeMoods.length)];
-          const moods = [primary];
-          
-          // Add 1 or 2 more moods
-          const extraCount = Math.floor(Math.random() * 2) + 1; // 1 or 2 extra moods
-          for (let k = 0; k < extraCount; k++) {
-            const pool = [...positiveMoods, ...negativeMoods];
-            const extra = pool[Math.floor(Math.random() * pool.length)] as MoodType;
-            if (!moods.includes(extra)) {
-              moods.push(extra);
-            }
-          }
-          moodsToLog = moods;
-          
-          const scenario = negativeScenarios[Math.floor(Math.random() * negativeScenarios.length)];
-          title = scenario.title[language] || scenario.title.English;
-          content = scenario.content[language] || scenario.content.English;
+      if (data.sobrietyStartDate) setSobrietyStartDateState(data.sobrietyStartDate);
+      if (data.reflections) setReflections(data.reflections);
+      if (data.steps) setSteps(data.steps);
+      if (data.customMoods) setCustomMoods(data.customMoods);
+      if (data.language) setLanguageState(data.language as any);
+      if (data.supportNumber !== undefined) setSupportNumberState(data.supportNumber);
+      if (data.sponsorName !== undefined) setSponsorNameState(data.sponsorName);
+      if (data.sponsorNumber !== undefined) setSponsorNumberState(data.sponsorNumber);
+      if (data.supportLink !== undefined) setSupportLinkState(data.supportLink);
+      if (data.lastSoberCheckInTime) setLastSoberCheckInTime(data.lastSoberCheckInTime);
+
+      const normCode = normalizeSyncCode(code);
+      setSyncCode(normCode);
+      const now = new Date().toISOString();
+      setLastCloudSync(now);
+      setOnboardedState(true);
+
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Restore failed' };
+    }
+  };
+
+  // Auto-sync to Cloud Firestore whenever user recovery data changes
+  useEffect(() => {
+    if (onboarded || reflections.length > 0) {
+      const timer = setTimeout(() => {
+        syncToCloud().catch(() => {});
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [sobrietyStartDate, reflections, steps, customMoods, lastSoberCheckInTime, onboarded]);
+
+  // Initial cloud restore listener if #sync= was in URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash && hash.includes('sync=')) {
+        const cleanHash = hash.startsWith('#') ? hash.substring(1) : hash;
+        const params = new URLSearchParams(cleanHash);
+        const codeFromUrl = params.get('sync');
+        if (codeFromUrl && (!reflections || reflections.length === 0)) {
+          restoreFromSyncCode(codeFromUrl).catch(() => {});
         }
-        
-        // Add some hour/minute offset so the entries have distinct timestamps within that day
-        const entryDate = new Date(d);
-        entryDate.setHours(8 + j * 4, Math.floor(Math.random() * 60), 0, 0);
-
-        generatedReflections.push({
-          id: `seeded-${i}-${j}-${Date.now()}`,
-          date: entryDate.toISOString(),
-          title: `${title} (${j + 1}/${numEntries})`,
-          content,
-          moods: moodsToLog
-        });
       }
     }
-    
-    setReflections(generatedReflections);
-    localStorage.setItem('reflections', JSON.stringify(generatedReflections));
-  };
+  }, []);
 
   return (
     <SanctuaryContext.Provider
@@ -863,7 +765,9 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           sponsorName,
           sponsorNumber,
           supportLink,
-          onboarded
+          onboarded,
+          syncCode,
+          lastCloudSync
         },
         setActiveTab,
         setCurrentLessonId,
@@ -893,7 +797,10 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSponsorNumber,
         setSupportLink,
         setOnboarded,
-        seed90DaysData,
+        syncCode,
+        lastCloudSync,
+        syncToCloud,
+        restoreFromSyncCode,
       }}
     >
       {children}

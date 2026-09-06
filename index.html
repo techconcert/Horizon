@@ -4,10 +4,56 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Horizon</title>
-    <link rel="manifest" href="/manifest.json?v=3" />
-    <link rel="icon" type="image/png" href="/favicon.png?v=3" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=3" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
+    <!-- Instant PWA Self-Healing: clears stale service-worker caches if missing chunks cause a blank screen -->
+    <script>
+      (function() {
+        var key = 'horizon_recovery_lock';
+        function autoHeal() {
+          var now = Date.now();
+          var last = parseInt(sessionStorage.getItem(key) || '0', 10);
+          if (now - last < 8000) return; // Debounce reloads
+          sessionStorage.setItem(key, String(now));
+          console.warn('[Horizon] Auto-healing stale PWA cache and service worker...');
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              return Promise.all(names.map(function(n) { return caches.delete(n); }));
+            }).catch(function() {});
+          }
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              return Promise.all(regs.map(function(r) { return r.unregister(); }));
+            }).catch(function() {});
+          }
+          setTimeout(function() {
+            window.location.reload();
+          }, 300);
+        }
+
+        window.addEventListener('error', function(e) {
+          var target = e.target;
+          var isAsset = target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK');
+          var msg = (e.message || '').toLowerCase();
+          var isModuleOrSyntax = msg.indexOf('unexpected token') !== -1 ||
+                                 msg.indexOf('dynamically imported module') !== -1 ||
+                                 msg.indexOf('loading chunk') !== -1 ||
+                                 msg.indexOf('importing a module script failed') !== -1;
+          if (isAsset || isModuleOrSyntax) {
+            autoHeal();
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(e) {
+          var reason = (e.reason && (e.reason.message || String(e.reason))) || '';
+          if (reason.indexOf('dynamically imported module') !== -1 || reason.indexOf('Loading chunk') !== -1) {
+            autoHeal();
+          }
+        });
+      })();
+    </script>
+    <link rel="manifest" href="/manifest.json?v=4" />
+    <link rel="icon" type="image/png" href="/favicon.png?v=4" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=4" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
     <meta name="theme-color" content="#F0EDE9" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

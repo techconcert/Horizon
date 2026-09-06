@@ -6,7 +6,188 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSanctuary } from '../context/SanctuaryContext';
-import { Sparkles, BrainCircuit, Play, Check, Compass, HeartHandshake, RotateCcw, CheckCircle2, ShieldAlert, Info, Flower2, FileText } from 'lucide-react';
+import {
+  Sparkles,
+  BrainCircuit,
+  Check,
+  HeartHandshake,
+  RotateCcw,
+  CheckCircle2,
+  ShieldAlert,
+  Info,
+  Flower2,
+  FileText,
+  Calendar
+} from 'lucide-react';
+
+interface KeytagBadgeProps {
+  totalDays: number;
+  language: 'English' | 'Español' | 'Português';
+}
+
+// NA Keytag Droplet-shaped anniversary badge with official Narcotics Anonymous color milestones
+const NAKeytagBadge: React.FC<KeytagBadgeProps> = ({ totalDays, language }) => {
+  let value: number | string = 0;
+  let unit = '';
+  let fullText = '';
+  let bg = '#EA580C';
+  let border = '#C2410C';
+  let innerBorder = 'rgba(255,255,255,0.45)';
+  let text = '#FFFFFF';
+  let textSub = 'rgba(255,255,255,0.95)';
+  let holeBorder = 'rgba(255,255,255,0.6)';
+
+  if (totalDays >= 365) {
+    // Transitions to whole years after 365 days (month 12), rounded down to years
+    const years = Math.floor(totalDays / 365);
+    value = years;
+    if (language === 'Español') unit = years === 1 ? 'año' : 'años';
+    else if (language === 'Português') unit = years === 1 ? 'ano' : 'anos';
+    else unit = years === 1 ? 'year' : 'years';
+    fullText = `${years} ${unit}`;
+
+    if (years === 1) {
+      // NA 1 Year: Celebrated Glow-in-the-Dark / Moonglow luminescent keytag
+      bg = '#DCFCE7';
+      border = '#86EFAC';
+      innerBorder = '#4ADE80';
+      text = '#065F46';
+      textSub = '#047857';
+      holeBorder = '#10B981';
+    } else {
+      // NA Multiple Years (2+ Years): Classic Deep Black with Metallic Gold accents
+      bg = '#18181B';
+      border = '#27272A';
+      innerBorder = '#EAB308';
+      text = '#FFFFFF';
+      textSub = '#FDE047';
+      holeBorder = '#71717A';
+    }
+  } else if (totalDays >= 30) {
+    // After 30 days, rounded down to 30-day intervals (1 month, 2 months, etc.) until 365 days
+    const months = Math.floor(totalDays / 30);
+    value = months;
+    if (language === 'Español') unit = months === 1 ? 'mes' : 'meses';
+    else if (language === 'Português') unit = months === 1 ? 'mês' : 'meses';
+    else unit = months === 1 ? 'month' : 'months';
+    fullText = `${months} ${unit}`;
+
+    // Official NA Fellowship milestones & colors:
+    // 30 Days (1 month): Orange
+    // 60 Days (2 months): Green
+    // 90 Days (3-5 months): Red
+    // 6 Months (6-8 months): Blue
+    // 9 Months (9-11 months): Yellow / Amber
+    if (months === 1) {
+      // 30 Days: Orange
+      bg = '#EA580C';
+      border = '#C2410C';
+      innerBorder = 'rgba(255,255,255,0.45)';
+      text = '#FFFFFF';
+      textSub = 'rgba(255,255,255,0.95)';
+      holeBorder = 'rgba(255,255,255,0.6)';
+    } else if (months === 2) {
+      // 60 Days: Green
+      bg = '#16A34A';
+      border = '#15803D';
+      innerBorder = 'rgba(255,255,255,0.45)';
+      text = '#FFFFFF';
+      textSub = 'rgba(255,255,255,0.95)';
+      holeBorder = 'rgba(255,255,255,0.6)';
+    } else if (months >= 3 && months < 6) {
+      // 90 Days (3-5 months): Red
+      bg = '#DC2626';
+      border = '#B91C1C';
+      innerBorder = 'rgba(255,255,255,0.45)';
+      text = '#FFFFFF';
+      textSub = 'rgba(255,255,255,0.95)';
+      holeBorder = 'rgba(255,255,255,0.6)';
+    } else if (months >= 6 && months < 9) {
+      // 6 Months (6-8 months): Blue
+      bg = '#2563EB';
+      border = '#1D4ED8';
+      innerBorder = 'rgba(255,255,255,0.45)';
+      text = '#FFFFFF';
+      textSub = 'rgba(255,255,255,0.95)';
+      holeBorder = 'rgba(255,255,255,0.6)';
+    } else {
+      // 9 Months (9-11 months): Yellow / Amber
+      bg = '#D97706';
+      border = '#B45309';
+      innerBorder = 'rgba(255,255,255,0.45)';
+      text = '#FFFFFF';
+      textSub = 'rgba(255,255,255,0.95)';
+      holeBorder = 'rgba(255,255,255,0.6)';
+    }
+  } else {
+    // Under 30 days: NA White keytag (shows 1 day when under 1 day)
+    const displayDays = totalDays >= 1 ? totalDays : 1;
+    value = displayDays;
+    if (language === 'Español') unit = displayDays === 1 ? 'día' : 'días';
+    else if (language === 'Português') unit = displayDays === 1 ? 'dia' : 'dias';
+    else unit = displayDays === 1 ? 'day' : 'days';
+    fullText = `${displayDays} ${unit}`;
+    bg = '#FFFFFF';
+    border = '#D1D5DB';
+    innerBorder = '#E5E7EB';
+    text = '#1F2937';
+    textSub = '#4B5563';
+    holeBorder = '#9CA3AF';
+  }
+
+  return (
+    <div
+      className="relative flex items-center justify-center shrink-0 select-none group-hover:scale-105 transition-transform"
+      title={`Narcotics Anonymous Keytag: ${fullText}`}
+      aria-label={`NA Keytag: ${fullText}`}
+    >
+      <svg viewBox="0 0 54 70" className="w-11 h-14 md:w-12 md:h-15 drop-shadow-sm shrink-0" fill="none">
+        {/* Outer Droplet / NA Keytag body */}
+        <path
+          d="M27 4 C33 4, 38 12, 45 27 C50 38, 50 51, 42 61 C36 67, 18 67, 12 61 C4 51, 4 38, 9 27 C16 12, 21 4, 27 4 Z"
+          fill={bg}
+          stroke={border}
+          strokeWidth="1.2"
+        />
+        {/* Debossed inner keytag border ridge */}
+        <path
+          d="M27 7.5 C31.5 7.5, 35.5 14, 41 27 C45.5 36, 45.5 48, 38.5 56.5 C33.5 62, 20.5 62, 15.5 56.5 C8.5 48, 8.5 36, 13 27 C18.5 14, 22.5 7.5, 27 7.5 Z"
+          fill="none"
+          stroke={innerBorder}
+          strokeWidth="0.8"
+        />
+        {/* Keyring hole at top */}
+        <circle cx="27" cy="12" r="3.2" fill="#F8F5F2" stroke={holeBorder} strokeWidth="1" />
+
+        {/* Milestone Number - positioned higher in the body */}
+        <text
+          x="27"
+          y="30"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill={text}
+          className="font-serif font-bold text-[14px]"
+          style={{ fill: text }}
+        >
+          {value}
+        </text>
+
+        {/* Milestone Unit - positioned directly at the widest point of the keyring */}
+        <text
+          x="27"
+          y="42"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill={textSub}
+          className="font-sans font-extrabold uppercase text-[7px] tracking-wider"
+          style={{ fill: textSub }}
+        >
+          {unit}
+        </text>
+      </svg>
+    </div>
+  );
+};
 
 export const HomeView: React.FC = () => {
 
@@ -30,13 +211,37 @@ export const HomeView: React.FC = () => {
 
   const [generatedIntention, setGeneratedIntention] = useState<string>(() => {
     if (state.language === 'English') {
-      return 'I give myself permission to rest, to reset, and to begin again without judgment.';
+      return 'Just for today, I give myself permission to rest, to reset, and to begin again without judgment.';
     } else if (state.language === 'Español') {
-      return 'Me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.';
+      return 'Sólo por hoy, me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.';
     } else {
-      return 'Dou-me permissão para descansar, recomeçar e iniciar novamente sem julgamento.';
+      return 'Só por hoje, dou-me permissão para descansar, recomeçar e iniciar novamente sem julgamento.';
     }
   });
+
+  // Keep default intention in sync when language switches
+  useEffect(() => {
+    setGeneratedIntention(prev => {
+      const defaultPhrases = [
+        'I give myself permission to rest, to reset, and to begin again without judgment.',
+        'Me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.',
+        'Dou-me permissão para descansar, recomeçar e iniciar novamente sem julgamento.',
+        'Just for today, I give myself permission to rest, to reset, and to begin again without judgment.',
+        'Sólo por hoy, me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.',
+        'Só por hoje, dou-me permissão para descansar, recomeçar e iniciar novamente sem julgamento.'
+      ];
+      if (defaultPhrases.includes(prev)) {
+        if (state.language === 'English') {
+          return 'Just for today, I give myself permission to rest, to reset, and to begin again without judgment.';
+        } else if (state.language === 'Español') {
+          return 'Sólo por hoy, me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.';
+        } else {
+          return 'Só por hoje, dou-me permissão para descansar, recomeçar e iniciar novamente sem julgamento.';
+        }
+      }
+      return prev;
+    });
+  }, [state.language]);
 
   const [showResetModal, setShowResetModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -153,11 +358,56 @@ export const HomeView: React.FC = () => {
     return data[key]?.[lang] || key;
   };
 
-  // Precise mathematical progress calculations for the 24-hour ring
-  const elapsedMinutesInCurrentDay = (timeGroundedString.hours * 60) + timeGroundedString.minutes;
-  const totalMinutesInDay = 24 * 60;
-  const progressRatio = Math.min(Math.max(elapsedMinutesInCurrentDay / totalMinutesInDay, 0), 1);
-  const strokeOffset = 301.59 * (1 - progressRatio);
+  // Local time calculations starting from local midnight (00:00:00)
+  const now = new Date();
+  const hoursToday = now.getHours();
+  const minutesToday = now.getMinutes();
+  const secondsToday = now.getSeconds();
+  const totalSecondsToday = (hoursToday * 3600) + (minutesToday * 60) + secondsToday;
+  const totalSecondsInDay = 86400; // 24 * 3600
+  const dailyProgressRatio = Math.min(Math.max(totalSecondsToday / totalSecondsInDay, 0), 1);
+  const dailyProgressPercent = Math.min(100, Math.max(0, Math.round(dailyProgressRatio * 100)));
+  const dailyProgressPercentExact = (dailyProgressRatio * 100).toFixed(1);
+
+  const hoursTodayStr = hoursToday.toString().padStart(2, '0');
+  const minutesTodayStr = minutesToday.toString().padStart(2, '0');
+  const secondsTodayStr = secondsToday.toString().padStart(2, '0');
+
+  const getAccumulatedTimeString = () => {
+    const { years, months, days } = timeGroundedString;
+    const lang = state.language;
+
+    let yStr = '';
+    if (years > 0) {
+      if (lang === 'Español') {
+        yStr = `${years} ${years === 1 ? 'Año' : 'Años'}, `;
+      } else if (lang === 'Português') {
+        yStr = `${years} ${years === 1 ? 'Ano' : 'Anos'}, `;
+      } else {
+        yStr = `${years} ${years === 1 ? 'Year' : 'Years'}, `;
+      }
+    }
+
+    let mStr = '';
+    if (lang === 'Español') {
+      mStr = `${months} ${months === 1 ? 'Mes' : 'Meses'}, `;
+    } else if (lang === 'Português') {
+      mStr = `${months} ${months === 1 ? 'Mês' : 'Meses'}, `;
+    } else {
+      mStr = `${months} ${months === 1 ? 'Month' : 'Months'}, `;
+    }
+
+    let dStr = '';
+    if (lang === 'Español') {
+      dStr = `${days} ${days === 1 ? 'Día' : 'Días'}`;
+    } else if (lang === 'Português') {
+      dStr = `${days} ${days === 1 ? 'Dia' : 'Dias'}`;
+    } else {
+      dStr = `${days} ${days === 1 ? 'Day' : 'Days'}`;
+    }
+
+    return `${yStr}${mStr}${dStr}`;
+  };
 
   const getRemainingCommitmentTime = () => {
     if (!state.lastSoberCheckInTime) return '';
@@ -183,105 +433,124 @@ export const HomeView: React.FC = () => {
   return (
     <div className="flex flex-col gap-5 items-center justify-center max-w-2xl mx-auto w-full">
       
-      {/* Centered Hero: Elegant Sobriety Arc Clock with Radial Glow */}
-      <section className="flex flex-col items-center justify-center w-full relative py-3 select-none">
-        
-        {/* Soft Ethereal Sage Glow Backdrop */}
-        <div className="absolute w-72 h-72 rounded-full bg-[#3e6355]/15 blur-3xl pointer-events-none z-0 animate-pulse" />
-        
-        {/* Circle Card Container */}
-        <div 
-          onClick={() => setShowInfoModal(true)}
-          title="Click to view explanation"
-          className={`relative z-10 flex flex-col items-center justify-center w-60 h-60 md:w-64 md:h-64 rounded-full border transition-all duration-300 p-5 text-center cursor-pointer group shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] ${
-            state.soberCheckedInToday
-              ? 'bg-[#e2f1ec] border-emerald-800/15'
-              : 'bg-white border-black/5'
-          }`}
+      {/* 1. Thin Tile at Top: Accumulated Progress with NA Keytag Droplet Badge */}
+      <section className="w-full max-w-xl mx-auto px-4 z-20">
+        <button
+          type="button"
+          onClick={() => setActiveTab('profile')}
+          className="w-full bg-white hover:bg-[#FAF8F5] border border-black/10 rounded-2xl p-3.5 sm:p-4 shadow-sm transition-all hover:shadow hover:scale-[1.005] active:scale-[0.995] flex items-center justify-between gap-3 text-left cursor-pointer group"
+          title={getLangText('Tap to open Settings', 'Toca para abrir Ajustes', 'Toque para abrir Configurações')}
         >
-          {/* Informational (i) absolute badge inside the circle */}
-          <div className="absolute top-4 right-4 text-black/30 group-hover:text-[#3e6355] hover:scale-110 transition-all duration-300">
-            <Info className="w-3.5 h-3.5" />
-          </div>
-
-          {/* Ethereal Outer Progress Ring */}
-          <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="48" fill="none" className="stroke-black/[0.03]" strokeWidth="0.5" />
-            <circle
-              cx="50"
-              cy="50"
-              r="48"
-              fill="none"
-              className="stroke-[#3e6355] transition-all duration-1000"
-              strokeWidth="1.75"
-              strokeDasharray="301.59"
-              strokeDashoffset={strokeOffset.toFixed(2)}
-              strokeLinecap="round"
-            />
-          </svg>
-
-          {/* Tiny Sage Dot Indicator at Top */}
-          <div className="w-1.5 h-1.5 rounded-full bg-[#3e6355] mb-1.5 shadow-sm" />
-
-          {/* Current Day Label */}
-          <span className="font-sans text-[9px] font-extrabold text-[#3e6355] uppercase tracking-[0.25em] mb-1.5 select-none">
-            {getText('day_in_progress')}
-          </span>
-
-          {/* Big Elegant Digits for Elapsed Hours & Minutes & Seconds of the current Day */}
-          <h2 className="font-serif text-2xl md:text-3xl font-light text-[#111111] leading-none select-none tracking-tight">
-            {timeGroundedString.hours.toString().padStart(2, '0')}h{' '}
-            {timeGroundedString.minutes.toString().padStart(2, '0')}m{' '}
-            <span className="text-black/40 text-xl font-normal">
-              {timeGroundedString.seconds.toString().padStart(2, '0')}s
+          <div className="flex flex-col min-w-0 pr-2 overflow-hidden">
+            <span className="font-sans text-[10px] uppercase tracking-[0.2em] font-extrabold text-black/50 block mb-0.5 whitespace-nowrap">
+              {getLangText('Accumulated Progress', 'Progreso Acumulado', 'Progresso Acumulado')}
             </span>
-          </h2>
-
-          {/* Spaced Label */}
-          <span className="font-sans text-[8px] font-bold text-black/45 uppercase tracking-[0.15em] mt-2">
-            {getText('of_current_block')}
-          </span>
-
-          {/* Cumulative Completed Milestone Tag */}
-          <div className="mt-2.5 px-2.5 py-0.5 bg-[#E5E1DB] border border-black/5 text-black font-sans text-[8px] font-extrabold tracking-widest uppercase rounded-full">
-            {getText('days_completed')}
+            <h2 className="font-serif text-base sm:text-lg md:text-xl text-[#111111] font-normal tracking-tight leading-snug whitespace-nowrap overflow-hidden text-ellipsis">
+              {getAccumulatedTimeString()}
+            </h2>
           </div>
-        </div>
+
+          <div className="shrink-0 flex items-center">
+            <NAKeytagBadge
+              totalDays={timeGroundedString.totalDays}
+              language={state.language}
+            />
+          </div>
+        </button>
       </section>
 
-      {/* Side-by-Side Commitment & Reset Oval Buttons */}
-      <section className="w-full max-w-xl px-4 z-20">
-        <div className="flex gap-3 w-full">
-          {/* Renew Commitment Button */}
-          <button
-            onClick={() => setOpenBottomSheet('renew')}
-            className={`flex-1 py-3 px-4 rounded-full font-sans text-[10px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] ${
-              state.soberCheckedInToday
-                ? 'bg-[#3e6355] hover:bg-[#314f44] text-white border border-[#3e6355]'
-                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
-            }`}
-          >
-            {state.soberCheckedInToday ? (
-              <>
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>{getLangText('Active', 'Activo', 'Ativo')}</span>
-              </>
-            ) : (
-              <>
-                <HeartHandshake className="w-4 h-4 shrink-0" />
-                <span>{getLangText('Renew', 'Renovar', 'Renovar')}</span>
-              </>
-            )}
-          </button>
+      {/* 2. Tile for Daily Progress of 'Just for Today' wrapping progress, renew, and reset */}
+      <section className="w-full max-w-xl mx-auto px-4 z-20">
+        <div className={`border rounded-3xl p-3.5 sm:p-4 md:p-5 shadow-sm flex flex-col gap-2.5 sm:gap-3 relative transition-all duration-300 ${
+          state.soberCheckedInToday
+            ? 'bg-[#e2f1ec] border-emerald-800/20'
+            : 'bg-white border-black/10'
+        }`}>
+          {/* Header row */}
+          <div className="flex items-center justify-between pb-2 border-b border-black/5">
+            <div className="flex items-center gap-2 min-w-0">
+              <Calendar className="w-4 h-4 text-[#3e6355] shrink-0" />
+              <h3 className="font-sans text-xs md:text-sm font-extrabold text-black uppercase tracking-widest whitespace-nowrap">
+                {getLangText('Just for Today', 'Sólo por hoy', 'Só Por Hoje')}
+              </h3>
+            </div>
+            
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowInfoModal(true)}
+                title={getLangText('Understanding the 24-hour cycle', 'Entendiendo el ciclo de 24 horas', 'Entendendo o ciclo de 24 horas')}
+                className="text-black/30 hover:text-[#3e6355] transition-colors p-1 cursor-pointer"
+              >
+                <Info className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
 
-          {/* Reset Clock Button */}
-          <button
-            onClick={() => setOpenBottomSheet('reset')}
-            className="flex-1 py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-200 rounded-full font-sans text-[10px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <RotateCcw className="w-4 h-4 shrink-0" />
-            <span>{getLangText('Reset', 'Reiniciar', 'Zerar')}</span>
-          </button>
+          {/* Digital Time elapsed since local time midnight */}
+          <div>
+            <h2 className="font-serif text-3xl md:text-4xl font-light text-[#111111] leading-none select-none tracking-tight">
+              {hoursTodayStr}h {minutesTodayStr}m{' '}
+              <span className="text-black/40 text-xl md:text-2xl font-normal">
+                {secondsTodayStr}s
+              </span>
+            </h2>
+          </div>
+
+          {/* Horizontal Progress Bar from Left to Right */}
+          <div className="w-full flex flex-col gap-1">
+            <div className={`w-full h-3 md:h-3.5 rounded-full overflow-hidden p-0.5 border ${
+              state.soberCheckedInToday
+                ? 'bg-[#cbe3db] border-emerald-800/10'
+                : 'bg-[#E5E1DB] border-black/5'
+            }`}>
+              <div
+                className="h-full bg-[#3e6355] rounded-full transition-all duration-700 ease-out"
+                style={{ width: `${dailyProgressPercentExact}%` }}
+              />
+            </div>
+            <div className="flex justify-between items-center text-[10px] font-sans font-bold text-black/45 uppercase tracking-wider px-0.5">
+              <span>0</span>
+              <span>{dailyProgressPercent}%</span>
+              <span>24</span>
+            </div>
+          </div>
+
+          {/* Side-by-Side Commitment & Reset Oval Buttons inside this tile */}
+          <div className="flex gap-2.5 w-full pt-2 border-t border-black/5">
+            {/* Renew Commitment Button */}
+            <button
+              type="button"
+              onClick={() => setOpenBottomSheet('renew')}
+              className={`flex-1 py-2.5 px-3 rounded-full font-sans text-[10px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                state.soberCheckedInToday
+                  ? 'bg-[#3e6355] hover:bg-[#314f44] text-white border border-[#3e6355]'
+                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+              }`}
+            >
+              {state.soberCheckedInToday ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{getLangText('Active', 'Activo', 'Ativo')}</span>
+                </>
+              ) : (
+                <>
+                  <HeartHandshake className="w-4 h-4 shrink-0" />
+                  <span>{getLangText('Renew', 'Renovar', 'Renovar')}</span>
+                </>
+              )}
+            </button>
+
+            {/* Reset Clock Button */}
+            <button
+              type="button"
+              onClick={() => setOpenBottomSheet('reset')}
+              className="flex-1 py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-200 rounded-full font-sans text-[10px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <RotateCcw className="w-4 h-4 shrink-0" />
+              <span>{getLangText('Reset', 'Reiniciar', 'Zerar')}</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -416,7 +685,9 @@ export const HomeView: React.FC = () => {
                     <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
                     <span className="font-sans text-[10px] font-extrabold text-emerald-800 uppercase tracking-widest flex justify-between items-center w-full">
                       <span>{getText('commitment_renewed')}</span>
-                      <span className="text-[9px] text-[#3e6355] bg-[#3e6355]/10 px-1.5 py-0.5 font-normal lowercase tracking-wider rounded-md">active</span>
+                      <span className="text-[9px] text-[#3e6355] bg-[#3e6355]/10 px-1.5 py-0.5 font-normal lowercase tracking-wider rounded-md">
+                        {getLangText('active', 'activo', 'ativo')}
+                      </span>
                     </span>
                   </div>
                   

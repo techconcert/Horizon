@@ -15,6 +15,7 @@ import { ProfileView } from './components/ProfileView';
 import { Shield, Lock, Fingerprint, RefreshCw, User, HeartHandshake, X, Phone, Video } from 'lucide-react';
 
 import { OnboardingView } from './components/OnboardingView';
+import { MigrationBanner } from './components/MigrationBanner';
 
 const SanctuaryContent: React.FC = () => {
   const { state, setActiveTab, showSOSModal, setShowSOSModal, getTranslation } = useSanctuary();
@@ -146,11 +147,14 @@ const SanctuaryContent: React.FC = () => {
     : isEs
     ? '"Dios, concédeme la serenidad para aceptar las cosas que no puedo cambiar, valor para cambiar las que puedo, y sabiduría para reconocer la diferencia."'
     : '"Deus, concedei-me a serenidade para aceitar as coisas que não posso mudar, coragem para mudar as que posso, e sabedoria para saber a diferença."';
-  const closePortalText = isEn ? 'Close Horizon Portal' : isEs ? 'Cerrar Portal' : 'Fechar Portal';
+  const closeButtonText = isEn ? 'Close' : isEs ? 'Cerrar' : 'Fechar';
 
   // Render App Contents
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F5F2] text-[#111111] relative selection:bg-black/10 select-none pb-safe">
+      {/* Seamless cross-domain migration banner */}
+      <MigrationBanner />
+
       {/* Editorial side margins or clean top header */}
       <div className="absolute top-0 inset-x-0 h-1 bg-black z-50" />
 
@@ -170,7 +174,7 @@ const SanctuaryContent: React.FC = () => {
           {state.syncEnabled && (
             <div className="hidden sm:flex items-center gap-1.5 text-black bg-[#E5E1DB] border border-black/5 rounded-full px-3 py-1 text-[9px] font-bold tracking-widest uppercase">
               <RefreshCw className="w-2.5 h-2.5 animate-spin-slow" />
-              <span>Synced</span>
+              <span>{isEn ? 'Synced' : isEs ? 'Sincronizado' : 'Sincronizado'}</span>
             </div>
           )}
           <button
@@ -180,7 +184,7 @@ const SanctuaryContent: React.FC = () => {
                 ? 'bg-[#3e6355] border-[#3e6355] text-[#F8F5F2] scale-105'
                 : 'bg-black border-black text-[#F8F5F2] hover:bg-black/80'
             }`}
-            title="Profile"
+            title={isEn ? 'Profile' : isEs ? 'Perfil' : 'Perfil'}
           >
             <User className="w-4.5 h-4.5" />
           </button>
@@ -297,7 +301,7 @@ const SanctuaryContent: React.FC = () => {
               {/* Serenity Prayer block */}
               <div className="bg-[#E5E1DB] p-4 rounded-2xl border border-black/15">
                 <p className="font-sans text-[9px] font-bold text-black/60 uppercase tracking-widest mb-2">
-                  {getTranslation('your_intention')}
+                  {getTranslation('serenity_prayer')}
                 </p>
                 <blockquote className="font-serif text-xs text-black/70 italic leading-relaxed">
                   {serenityText}
@@ -309,7 +313,7 @@ const SanctuaryContent: React.FC = () => {
               onClick={() => setShowSOSModal(false)}
               className="w-full mt-6 bg-black text-[#F8F5F2] font-sans text-[10px] font-bold tracking-widest uppercase py-3 rounded-full hover:bg-black/80 border border-black cursor-pointer transition-colors"
             >
-              {closePortalText}
+              {closeButtonText}
             </button>
           </div>
         </div>,

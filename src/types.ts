@@ -82,4 +82,6 @@ export interface SanctuaryState {
   sponsorName?: string;
   sponsorNumber?: string;
   supportLink?: string;
+  syncCode?: string;
+  lastCloudSync?: string | null;
 }

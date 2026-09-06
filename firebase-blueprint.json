@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/firebase/firebase-tools/master/schema/firestore-blueprint.json",
+  "entities": {
+    "sync_backups": {
+      "title": "Sync Backups",
+      "description": "Anonymous recovery data backups keyed by unique user sync codes",
+      "properties": {
+        "syncCode": { "type": "string", "description": "Unique 6-12 character recovery sync code" },
+        "data": { "type": "object", "description": "Serialized recovery state including sobriety date, reflections, and steps" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp of the last cloud backup" },
+        "version": { "type": "number", "description": "Schema version" }
+      }
+    }
+  }
+}

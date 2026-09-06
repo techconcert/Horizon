@@ -3,15 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSanctuary } from '../context/SanctuaryContext';
 import {
   Calendar,
   Lock,
   Globe,
   RefreshCw,
-  Download,
-  Upload,
   User,
   Shield,
   CheckCircle,
@@ -20,7 +18,13 @@ import {
   HeartHandshake,
   Phone,
   Video,
-  BrainCircuit
+  BrainCircuit,
+  Copy,
+  Check,
+  Cloud,
+  CloudDownload,
+  CloudUpload,
+  Loader2
 } from 'lucide-react';
 
 export const ProfileView: React.FC = () => {
@@ -36,77 +40,105 @@ export const ProfileView: React.FC = () => {
     setSponsorName,
     setSponsorNumber,
     setSupportLink,
-    seed90DaysData
+    syncCode,
+    lastCloudSync,
+    syncToCloud,
+    restoreFromSyncCode
   } = useSanctuary();
 
   const [dateInput, setDateInput] = useState(() => {
     // Format sobrietyStartDate as YYYY-MM-DD for standard html date input
+    if (!state.sobrietyStartDate) return '';
     const d = new Date(state.sobrietyStartDate);
-    return d.toISOString().split('T')[0];
+    return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
   });
 
+  useEffect(() => {
+    if (state.sobrietyStartDate) {
+      const d = new Date(state.sobrietyStartDate);
+      if (!isNaN(d.getTime())) {
+        setDateInput(d.toISOString().split('T')[0]);
+      }
+    } else {
+      setDateInput('');
+    }
+  }, [state.sobrietyStartDate]);
+
   const [isSavedNotify, setIsSavedNotify] = useState(false);
-  const [importError, setImportError] = useState('');
+
+  // Firestore Sync States
+  const [remoteSyncCodeInput, setRemoteSyncCodeInput] = useState('');
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+  const [isCloudRestoring, setIsCloudRestoring] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [cloudMessage, setCloudMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleCopySyncCode = () => {
+    if (syncCode) {
+      navigator.clipboard.writeText(syncCode);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    }
+  };
+
+  const handleManualSync = async () => {
+    setIsCloudSyncing(true);
+    setCloudMessage(null);
+    const success = await syncToCloud();
+    setIsCloudSyncing(false);
+    if (success) {
+      setCloudMessage({
+        type: 'success',
+        text: state.language === 'Português' ? 'Dados sincronizados com sucesso na nuvem!' : state.language === 'Español' ? '¡Datos sincronizados con éxito en la nube!' : 'Data synced successfully to the cloud!'
+      });
+    } else {
+      setCloudMessage({
+        type: 'error',
+        text: state.language === 'Português' ? 'Falha ao sincronizar com a nuvem' : state.language === 'Español' ? 'Error al sincronizar con la nube' : 'Failed to sync to cloud'
+      });
+    }
+    setTimeout(() => setCloudMessage(null), 4000);
+  };
+
+  const handleRestoreRemoteCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!remoteSyncCodeInput.trim()) return;
+
+    setIsCloudRestoring(true);
+    setCloudMessage(null);
+    const res = await restoreFromSyncCode(remoteSyncCodeInput.trim());
+    setIsCloudRestoring(false);
+    if (res.success) {
+      setRemoteSyncCodeInput('');
+      setCloudMessage({
+        type: 'success',
+        text: state.language === 'Português' ? 'Dados restaurados com sucesso!' : state.language === 'Español' ? '¡Datos restaurados con éxito!' : 'Records successfully restored!'
+      });
+    } else {
+      setCloudMessage({
+        type: 'error',
+        text: res.error || (state.language === 'Português' ? 'Código de sincronização não encontrado' : state.language === 'Español' ? 'Código de sincronización no encontrado' : 'Sync code not found')
+      });
+    }
+    setTimeout(() => setCloudMessage(null), 5000);
+  };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setDateInput(val);
     if (val) {
-      // Keep existing hours/minutes offsets
-      const oldDate = new Date(state.sobrietyStartDate);
+      // Keep existing hours/minutes offsets if available, otherwise default to current time
+      const oldDate = state.sobrietyStartDate ? new Date(state.sobrietyStartDate) : new Date();
       const newDate = new Date(val);
-      newDate.setHours(oldDate.getHours());
-      newDate.setMinutes(oldDate.getMinutes());
+      if (!isNaN(oldDate.getTime())) {
+        newDate.setHours(oldDate.getHours());
+        newDate.setMinutes(oldDate.getMinutes());
+      }
       setSobrietyStartDate(newDate.toISOString());
 
       setIsSavedNotify(true);
       setTimeout(() => setIsSavedNotify(false), 2500);
     }
-  };
-
-  const handleExportData = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({
-      sobrietyStartDate: state.sobrietyStartDate,
-      reflections: state.reflections,
-      customMoods: state.customMoods,
-      settings: {
-        language: state.language,
-        biometricLock: state.biometricLock,
-        syncEnabled: state.syncEnabled
-      }
-    }, null, 2));
-
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', 'horizon-journal-export.json');
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
-
-  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const parsed = JSON.parse(event.target?.result as string);
-        if (parsed.sobrietyStartDate) localStorage.setItem('sobrietyStartDate', parsed.sobrietyStartDate);
-        if (parsed.reflections) localStorage.setItem('reflections', JSON.stringify(parsed.reflections));
-        if (parsed.customMoods) localStorage.setItem('customMoods', JSON.stringify(parsed.customMoods));
-        if (parsed.settings) {
-          if (parsed.settings.language) localStorage.setItem('language', parsed.settings.language);
-          if (parsed.settings.biometricLock !== undefined) localStorage.setItem('biometricLock', String(parsed.settings.biometricLock));
-          if (parsed.settings.syncEnabled !== undefined) localStorage.setItem('syncEnabled', String(parsed.settings.syncEnabled));
-        }
-        setImportError('');
-        window.location.reload();
-      } catch (err) {
-        setImportError(state.language === 'English' ? 'Failed to parse backup file.' : 'No se pudo leer el archivo de copia de seguridad.');
-      }
-    };
-    reader.readAsText(file);
   };
 
   return (
@@ -303,50 +335,115 @@ export const ProfileView: React.FC = () => {
         </article>
       </div>
 
-      {/* Downloader Export & Backup Row */}
-      <section className="bg-[#E5E1DB] p-4 rounded-3xl border border-black/10 flex flex-col md:flex-row items-center justify-between gap-4 max-w-5xl mx-auto w-full">
-        <div className="flex-grow">
-          <h4 className="font-serif text-base font-normal text-black mb-0.5">
-            {state.language === 'English' ? 'Backup & Migrate Records' : state.language === 'Español' ? 'Copia de Seguridad y Migración' : 'Backup e Migração'}
-          </h4>
-          <p className="font-sans text-xs text-black/60 leading-relaxed max-w-xl">
-            {state.language === 'English'
-              ? 'Export your custom reflection history, sobriety logs, and configurations to a JSON file, or import an existing backup to restore your progress.'
-              : state.language === 'Español'
-              ? 'Exporta tu historial, registros y configuraciones a un archivo JSON, o importa una copia existente para restaurar tu progreso.'
-              : 'Exporte o seu histórico, registros e configurações para um arquivo JSON, ou importe um backup existente para restaurar o progresso.'}
-          </p>
-          {importError && (
-            <p className="font-sans text-xs text-red-800 font-semibold mt-2 animate-fadeIn">
-              ⚠️ {importError}
+      {/* Anonymous Cloud Sync & Sync Code Section */}
+      <section className="bg-white p-5 rounded-3xl border border-black/10 shadow-none max-w-5xl mx-auto w-full">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-4 border-b border-black/10">
+          <div>
+            <div className="flex items-center gap-2 text-amber-950 mb-1">
+              <Cloud className="w-4 h-4" />
+              <h3 className="font-sans text-[10px] font-bold uppercase tracking-widest">
+                {state.language === 'English' ? 'Anonymous Cloud Sync & Multi-Device' : state.language === 'Español' ? 'Sincronización Anónima en la Nube' : 'Sincronização Anônima na Nuvem'}
+              </h3>
+            </div>
+            <p className="font-sans text-xs text-black/60 leading-relaxed max-w-xl">
+              {state.language === 'English'
+                ? 'Your recovery data is privately synced to Google Cloud Firestore using an anonymous device code. Use this code to access your progress across devices or transfer from the previous domain without needing an account.'
+                : state.language === 'Español'
+                ? 'Tus datos de recuperación se sincronizan de forma privada con Google Cloud Firestore mediante un código anónimo. Úsalo para acceder a tu progreso en varios dispositivos o transferir desde el sitio anterior sin necesidad de cuenta.'
+                : 'Seus dados de recuperação são sincronizados privadamente com o Google Cloud Firestore usando um código anônimo. Use este código para acessar seu progresso em outros aparelhos ou transferir do site anterior sem precisar de conta.'}
             </p>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0 w-full md:w-auto justify-end">
-          {/* Import Button with Hidden Input */}
-          <label className="bg-white hover:bg-[#F8F5F2] text-black border border-black/15 font-sans text-[10px] font-bold tracking-widest uppercase px-5 py-2.5 rounded-full transition-colors cursor-pointer flex items-center gap-1.5 shadow-none select-none">
-            <Upload className="w-4 h-4" />
-            <span>{state.language === 'English' ? 'Import Backup' : state.language === 'Español' ? 'Importar Copia' : 'Importar Backup'}</span>
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleImportData}
-              className="hidden"
-            />
-          </label>
+          </div>
 
-          {/* Export Button */}
-          <button
-            onClick={handleExportData}
-            className="bg-black hover:bg-black/80 text-[#F8F5F2] font-sans text-[10px] font-bold tracking-widest uppercase px-5 py-2.5 rounded-full border border-black transition-colors cursor-pointer flex items-center gap-1.5 shadow-none"
-          >
-            <Download className="w-4 h-4" />
-            <span>{getTranslation('export_journal')}</span>
-          </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+            <button
+              onClick={handleManualSync}
+              disabled={isCloudSyncing}
+              className="bg-[#EAE5DF] hover:bg-[#E0D8D0] text-black font-sans text-[10px] font-bold tracking-widest uppercase px-4 py-2.5 rounded-full border border-black/10 transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              {isCloudSyncing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <CloudUpload className="w-3.5 h-3.5" />
+              )}
+              <span>{state.language === 'English' ? 'Sync to Cloud Now' : state.language === 'Español' ? 'Sincronizar Ahora' : 'Sincronizar Agora'}</span>
+            </button>
+          </div>
+        </div>
+
+        {cloudMessage && (
+          <div className={`mt-3 p-3 rounded-2xl text-xs font-sans font-medium flex items-center gap-2 animate-fadeIn ${
+            cloudMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+          }`}>
+            {cloudMessage.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <Shield className="w-4 h-4 shrink-0" />}
+            <span>{cloudMessage.text}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-1">
+          {/* Active Device Sync Code Card */}
+          <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-black/10 flex flex-col justify-between">
+            <div>
+              <span className="font-sans text-[10px] uppercase font-bold tracking-wider text-black/50 block mb-1">
+                {state.language === 'English' ? 'Your Current Sync Code' : state.language === 'Español' ? 'Tu Código de Sincronización' : 'Seu Código de Sincronização'}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xl font-bold tracking-widest text-black bg-white px-3 py-1.5 rounded-xl border border-black/10">
+                  {syncCode}
+                </span>
+                <button
+                  onClick={handleCopySyncCode}
+                  className="bg-black text-white hover:bg-black/80 p-2 rounded-xl transition-colors cursor-pointer"
+                  title="Copy Sync Code / Copiar Código"
+                >
+                  {codeCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="font-sans text-[11px] text-black/60 mt-2">
+                {lastCloudSync 
+                  ? `${state.language === 'Português' ? 'Última sincronização na nuvem:' : state.language === 'Español' ? 'Última sincronización:' : 'Last cloud sync:'} ${new Date(lastCloudSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                  : (state.language === 'Português' ? 'Sincronizado automaticamente com Firestore' : 'Auto-synced with Firestore')}
+              </p>
+            </div>
+          </div>
+
+          {/* Retrieve / Pair with Another Code */}
+          <form onSubmit={handleRestoreRemoteCode} className="bg-[#FAF8F5] p-4 rounded-2xl border border-black/10 flex flex-col justify-between">
+            <div>
+              <span className="font-sans text-[10px] uppercase font-bold tracking-wider text-black/50 block mb-1">
+                {state.language === 'English' ? 'Restore from Sync Code' : state.language === 'Español' ? 'Restaurar desde Código' : 'Restaurar por Código'}
+              </span>
+              <p className="font-sans text-[11px] text-black/60 mb-2">
+                {state.language === 'English'
+                  ? 'Enter the 6-character code from your old domain or another device:'
+                  : state.language === 'Español'
+                  ? 'Introduce el código de 6 caracteres de tu otro dispositivo o dominio anterior:'
+                  : 'Digite o código de 6 caracteres do site anterior ou de outro dispositivo:'}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 w-full">
+                <input
+                  type="text"
+                  value={remoteSyncCodeInput}
+                  onChange={(e) => setRemoteSyncCodeInput(e.target.value.toUpperCase())}
+                  placeholder="HZ-XXXX"
+                  className="min-w-0 flex-1 w-full bg-white border border-black/20 rounded-xl px-3 py-2 text-xs font-mono uppercase tracking-wider text-black focus:outline-none focus:border-black"
+                />
+                <button
+                  type="submit"
+                  disabled={isCloudRestoring || !remoteSyncCodeInput.trim()}
+                  className="w-full sm:w-auto bg-black hover:bg-black/80 text-white font-sans text-xs font-semibold px-3.5 py-2 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50 whitespace-nowrap"
+                >
+                  {isCloudRestoring ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <CloudDownload className="w-3.5 h-3.5" />
+                  )}
+                  <span>{state.language === 'Português' ? 'Recuperar' : state.language === 'Español' ? 'Recuperar' : 'Retrieve'}</span>
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       </section>
-
-
     </div>
   );
 };
