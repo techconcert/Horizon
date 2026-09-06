@@ -1,4 +1,7 @@
 /**
+ * @license
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
  * Utility for exporting and generating cross-domain migration URLs
  * between the Cloud Run endpoint (horizon-606495187151.us-west2.run.app)
  * and the new official custom domain (horizon-barrmy.ai.studio).

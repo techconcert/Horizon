@@ -1,3 +1,8 @@
+/**
+ * @license
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 import React, { useState, useEffect } from 'react';
 import { ArrowUpRight, CheckCircle2, Copy, Check, X } from 'lucide-react';
 import { isOldDomain } from '../utils/migration';

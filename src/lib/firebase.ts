@@ -1,3 +1,8 @@
+/**
+ * @license
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';

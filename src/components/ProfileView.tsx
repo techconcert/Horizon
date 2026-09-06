@@ -1,6 +1,6 @@
 /**
  * @license
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 import React, { useState, useEffect } from 'react';
@@ -444,6 +444,13 @@ export const ProfileView: React.FC = () => {
           </form>
         </div>
       </section>
+
+      {/* App License & Version Footer */}
+      <footer className="text-center py-4 text-xs font-sans text-black/40">
+        <p>
+          Horizon • {state.language === 'Español' ? 'Software libre bajo licencia GNU GPLv3' : state.language === 'Português' ? 'Software livre sob licença GNU GPLv3' : 'Free & Open Source Software under GNU GPLv3'}
+        </p>
+      </footer>
     </div>
   );
 };

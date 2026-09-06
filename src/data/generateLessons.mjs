@@ -1,3 +1,8 @@
+/**
+ * @license
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 import fs from 'fs';
 
 const translations = {
