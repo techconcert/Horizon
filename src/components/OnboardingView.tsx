@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSanctuary } from '../context/SanctuaryContext';
+import { detectDefaultLanguage } from '../utils/languageDetection';
 import { 
   Globe, 
   Calendar, 
@@ -45,7 +46,7 @@ const ONBOARD_TRANS = {
   },
   step_date_title: {
     English: 'Set Your Sobriety Milestone',
-    Español: 'Establece tu Hito de Sobriety',
+    Español: 'Establece tu Hito de Sobriedad',
     Português: 'Defina seu Marco de Sobriedade'
   },
   step_date_desc: {
@@ -130,8 +131,18 @@ export const OnboardingView: React.FC = () => {
 
   const [stepIndex, setStepIndex] = useState(0);
 
-  // Local state initialized with context values
-  const [localLang, setLocalLang] = useState<'English' | 'Español' | 'Português'>(state.language || 'English');
+  // Local state initialized with context or deduced default language
+  const [localLang, setLocalLang] = useState<'English' | 'Español' | 'Português'>(() => {
+    return state.language || detectDefaultLanguage();
+  });
+
+  // Ensure sanctuary context language matches deduced onboarding language if not explicitly stored
+  useEffect(() => {
+    const deduced = state.language || detectDefaultLanguage();
+    if (deduced && deduced !== state.language) {
+      setLanguage(deduced);
+    }
+  }, [state.language, setLanguage]);
   
   const [localDate, setLocalDate] = useState(() => {
     // Default to today
@@ -167,7 +178,7 @@ export const OnboardingView: React.FC = () => {
     const res = await restoreFromSyncCode(inputSyncCode.trim());
     setIsRestoring(false);
     if (!res.success) {
-      setSyncError(res.error || (currentLang === 'Português' ? 'Código não encontrado' : 'Sync code not found'));
+      setSyncError(res.error || (currentLang === 'Português' ? 'Código não encontrado' : currentLang === 'Español' ? 'Código no encontrado' : 'Sync code not found'));
     }
   };
 
@@ -247,7 +258,7 @@ export const OnboardingView: React.FC = () => {
               </div>
 
               <div className="flex flex-col gap-2 mt-1 mb-2.5">
-                {(['English', 'Español', 'Português'] as const).map((lang) => (
+                {(['English', 'Português', 'Español'] as const).map((lang) => (
                   <button
                     key={lang}
                     type="button"

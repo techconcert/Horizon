@@ -14,6 +14,9 @@ import {
   writePayloadToLocalStorage, 
   normalizeSyncCode 
 } from '../services/cloudSync';
+import { detectDefaultLanguage } from '../utils/languageDetection';
+
+export { detectDefaultLanguage };
 
 interface SanctuaryContextType {
   state: SanctuaryState;
@@ -152,6 +155,31 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'ai_limit_reached': { English: 'Daily Limit Reached', Español: 'Límite diario alcanzado', Português: 'Limite diário atingido' },
   'ai_limit_desc': { English: 'To keep this private sanctuary 100% free and sustainable, interactive generations are limited to 3 sessions per day. Showing a serene offline reflection for today.', Español: 'Para mantener este santuario 100% gratuito y sostenible, las sesiones con IA están limitadas a 3 por día. Mostrando una reflexión offline serena para hoy.', Português: 'Para manter este espaço 100% gratuito, as sessões interativas são limitadas a 3 por dia. Aqui vai uma reflexão offline serena para hoje.' },
   'ai_remaining_credits': { English: 'Daily Credits Used', Español: 'Créditos diarios usados', Português: 'Créditos diários usados' },
+  'reflection_questions': { English: 'Reflection Questions', Español: 'Preguntas de Reflexión', Português: 'Perguntas de Reflexão' },
+  'previous_lesson': { English: 'Previous Lesson', Español: 'Lección Anterior', Português: 'Lição Anterior' },
+  'next_lesson': { English: 'Next Lesson', Español: 'Siguiente Lección', Português: 'Próxima Lição' },
+  'write_reflection_prompt': {
+    English: 'Write your honest reflection notes, realizations, or answers here...',
+    Español: 'Escribe aquí tus reflexiones sinceras, aprendizajes o respuestas...',
+    Português: 'Escreva aqui suas reflexões sinceras, percepções ou respostas...'
+  },
+  'complete_step_btn': { English: 'Complete Step & Save Reflection', Español: 'Completar Paso y Guardar Reflexión', Português: 'Concluir Passo e Salvar Reflexão' },
+  'mark_as_completed': { English: 'Mark Step as Completed', Español: 'Marcar Paso como Completado', Português: 'Marcar Passo como Concluído' },
+  'step_completed_badge': { English: 'Step Completed', Español: 'Paso Completado', Português: 'Passo Concluído' },
+  'save_notes_btn': { English: 'Save Notes & Complete', Español: 'Guardar Notas y Completar', Português: 'Salvar Notas e Concluir' },
+  'write_notes_first': {
+    English: 'Please write a brief reflection note or answer the questions before completing.',
+    Español: 'Por favor, escribe una breve nota de reflexión o responde las preguntas antes de completar.',
+    Português: 'Por favor, escreva uma breve reflexão ou responda às perguntas antes de concluir.'
+  },
+  'select_a_step': { English: 'Select a Step to Read', Español: 'Selecciona un Paso para Leer', Português: 'Selecione um Passo para Ler' },
+  'select_step_desc': {
+    English: 'Explore the 12 principles of recovery with guided questions and reflections.',
+    Español: 'Explora los 12 principios de recuperación con preguntas guiadas y reflexiones.',
+    Português: 'Explore os 12 princípios de recuperação com perguntas guiadas e reflexões.'
+  },
+  'all_steps': { English: 'All Steps', Español: 'Todos los Pasos', Português: 'Todos os Passos' },
+  'progress': { English: 'Progress', Español: 'Progreso', Português: 'Progresso' },
 };
 
 export const calculateTimeGrounded = (startDateStr?: string | null) => {
@@ -231,7 +259,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const [language, setLanguageState] = useState<'English' | 'Español' | 'Português'>(() => {
-    return (localStorage.getItem('language') as 'English' | 'Español' | 'Português') || 'English';
+    return detectDefaultLanguage();
   });
 
   const [syncEnabled, setSyncEnabledState] = useState<boolean>(() => {

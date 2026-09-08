@@ -174,7 +174,7 @@ export const ProfileView: React.FC = () => {
             <div className="flex items-center gap-2 text-red-950 mb-2">
               <Calendar className="w-4 h-4" />
               <h3 className="font-sans text-[10px] font-bold uppercase tracking-widest">
-                {state.language === 'English' ? 'Configure Horizon Milestone' : state.language === 'Español' ? 'Configurar Hito de Horizon' : 'Configurar Hito do Horizon'}
+                {state.language === 'English' ? 'Configure Horizon Milestone' : state.language === 'Español' ? 'Configurar Hito de Horizon' : 'Configurar Marco do Horizon'}
               </h3>
             </div>
             <p className="font-sans text-xs text-black/60 leading-relaxed mb-3">
@@ -233,8 +233,8 @@ export const ProfileView: React.FC = () => {
               className="bg-white border border-black/15 rounded-full px-3 py-1.5 text-xs font-bold text-[#111111] focus:outline-none cursor-pointer"
             >
               <option value="English">English</option>
-              <option value="Español">Español</option>
               <option value="Português">Português</option>
+              <option value="Español">Español</option>
             </select>
           </div>
         </article>
@@ -393,7 +393,7 @@ export const ProfileView: React.FC = () => {
                 <button
                   onClick={handleCopySyncCode}
                   className="bg-black text-white hover:bg-black/80 p-2 rounded-xl transition-colors cursor-pointer"
-                  title="Copy Sync Code / Copiar Código"
+                  title={state.language === 'English' ? 'Copy Sync Code' : 'Copiar Código'}
                 >
                   {codeCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                 </button>
@@ -401,7 +401,7 @@ export const ProfileView: React.FC = () => {
               <p className="font-sans text-[11px] text-black/60 mt-2">
                 {lastCloudSync 
                   ? `${state.language === 'Português' ? 'Última sincronização na nuvem:' : state.language === 'Español' ? 'Última sincronización:' : 'Last cloud sync:'} ${new Date(lastCloudSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                  : (state.language === 'Português' ? 'Sincronizado automaticamente com Firestore' : 'Auto-synced with Firestore')}
+                  : (state.language === 'Português' ? 'Sincronizado automaticamente com Firestore' : state.language === 'Español' ? 'Sincronizado automáticamente con Firestore' : 'Auto-synced with Firestore')}
               </p>
             </div>
           </div>
@@ -447,7 +447,7 @@ export const ProfileView: React.FC = () => {
 
       {/* App License & Version Footer */}
       <footer className="text-center py-4 text-xs font-sans text-black/40 space-y-0.5">
-        <p className="font-medium text-black/50">Horizon v2.1.3</p>
+        <p className="font-medium text-black/50">Horizon v2.1.6</p>
         <p>
           {state.language === 'Español' ? 'Software libre bajo licencia GNU GPLv3' : state.language === 'Português' ? 'Software livre sob licença GNU GPLv3' : 'Free & Open Source Software under GNU GPLv3'}
         </p>

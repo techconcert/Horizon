@@ -598,7 +598,9 @@ const getText = (en: string, es: string, pt: string) => {
           <section className="text-center max-w-2xl mx-auto flex flex-col items-center">
             <div className="inline-flex items-center space-x-2 px-2.5 py-1 rounded-full bg-[#E5E1DB] mb-2 border border-black/10">
               <Compass className="w-3.5 h-3.5 text-black/60" />
-              <span className="font-sans text-[9px] font-bold text-black/60 uppercase tracking-widest">Step 11 Tools</span>
+              <span className="font-sans text-[9px] font-bold text-black/60 uppercase tracking-widest">
+                {getText('Step 11 Tools', 'Herramientas del Paso 11', 'Ferramentas do Passo 11')}
+              </span>
             </div>
             <h2 className="font-serif text-3xl md:text-4xl text-black mb-2 font-normal tracking-tight">
               {getTranslation('daily_meditation')}
@@ -702,7 +704,7 @@ const getText = (en: string, es: string, pt: string) => {
                 className="w-full bg-black text-[#F8F5F2] hover:bg-black/80 rounded-full py-3 font-sans text-[10px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-black shadow-none"
               >
                 {isMeditationRunning ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                <span>{isMeditationRunning ? 'Pause Silence' : getTranslation('begin_silence')}</span>
+                <span>{isMeditationRunning ? getText('Pause Silence', 'Pausar silencio', 'Pausar silêncio') : getTranslation('begin_silence')}</span>
               </button>
             </aside>
           </div>
@@ -909,7 +911,7 @@ const getText = (en: string, es: string, pt: string) => {
                       {trans.description}
                     </p>
                     <span className="font-sans text-[9px] text-black/50 font-bold uppercase tracking-widest">
-                      Ratio: Inhale {tech.inhale}s {tech.hold1 > 0 ? `| Hold ${tech.hold1}s` : ''} | Exhale {tech.exhale}s {tech.hold2 > 0 ? `| Rest ${tech.hold2}s` : ''}
+                      {getText('Ratio:', 'Proporción:', 'Proporção:')} {getTranslation('inhale')} {tech.inhale}s {tech.hold1 > 0 ? `| ${getTranslation('hold')} ${tech.hold1}s` : ''} | {getTranslation('exhale')} {tech.exhale}s {tech.hold2 > 0 ? `| ${getText('Rest', 'Descanso', 'Descanso')} ${tech.hold2}s` : ''}
                     </span>
                   </article>
                 );
@@ -947,7 +949,7 @@ const getText = (en: string, es: string, pt: string) => {
 
             <div className="flex flex-col gap-4 mb-4">
               <span className="font-sans text-[10px] font-bold text-red-900 uppercase tracking-widest">
-                Reflection Questions:
+                {getTranslation('reflection_questions')}:
               </span>
               <ul className="list-disc pl-5 flex flex-col gap-2 font-sans text-xs text-[#111111] leading-relaxed">
                 {selectedPrompt.questions.map((q, i) => (
@@ -973,7 +975,7 @@ const getText = (en: string, es: string, pt: string) => {
                 }}
                 className="bg-white text-black border border-black/15 px-4 py-2 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-black/5"
               >
-                Cancel
+                {getText('Cancel', 'Cancelar', 'Cancelar')}
               </button>
               <button
                 onClick={handleSavePromptReflection}

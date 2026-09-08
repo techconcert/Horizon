@@ -6,9 +6,9 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSanctuary } from '../context/SanctuaryContext';
+import { getDailyFocusMessage } from '../data/dailyFocusMessages';
 import {
   Sparkles,
-  BrainCircuit,
   Check,
   HeartHandshake,
   RotateCcw,
@@ -195,10 +195,6 @@ export const HomeView: React.FC = () => {
     state,
     getTranslation,
     timeGroundedString,
-    generateAIIntention,
-    aiLoading,
-    aiUsageCount,
-    limitReached,
     setActiveTab,
     setSobrietyStartDate,
     toggleSoberCheckIn
@@ -209,38 +205,22 @@ export const HomeView: React.FC = () => {
     return pt;
   };
 
-  const [generatedIntention, setGeneratedIntention] = useState<string>(() => {
-    if (state.language === 'English') {
-      return 'Just for today, I give myself permission to rest, to reset, and to begin again without judgment.';
-    } else if (state.language === 'Español') {
-      return 'Sólo por hoy, me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.';
-    } else {
-      return 'Só por hoje, dou-me permissão para descansar, recomeçar e iniciar novamente sem julgamento.';
-    }
+  // Today's focus message changes automatically every day and adapts to current language
+  const [todayFocusMessage, setTodayFocusMessage] = useState<string>(() => {
+    return getDailyFocusMessage(new Date(), state.language);
   });
 
-  // Keep default intention in sync when language switches
+  // Keep focus message in sync when language switches
   useEffect(() => {
-    setGeneratedIntention(prev => {
-      const defaultPhrases = [
-        'I give myself permission to rest, to reset, and to begin again without judgment.',
-        'Me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.',
-        'Dou-me permissão para descansar, recomeçar e iniciar novamente sem julgamento.',
-        'Just for today, I give myself permission to rest, to reset, and to begin again without judgment.',
-        'Sólo por hoy, me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.',
-        'Só por hoje, dou-me permissão para descansar, recomeçar e iniciar novamente sem julgamento.'
-      ];
-      if (defaultPhrases.includes(prev)) {
-        if (state.language === 'English') {
-          return 'Just for today, I give myself permission to rest, to reset, and to begin again without judgment.';
-        } else if (state.language === 'Español') {
-          return 'Sólo por hoy, me doy permiso para descansar, reiniciar y comenzar de nuevo sin juzgarme.';
-        } else {
-          return 'Só por hoje, dou-me permissão para descansar, recomeçar e iniciar novamente sem julgamento.';
-        }
-      }
-      return prev;
-    });
+    setTodayFocusMessage(getDailyFocusMessage(new Date(), state.language));
+  }, [state.language]);
+
+  // Automatically update focus message if app is kept open across midnight (daily rollover)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTodayFocusMessage(getDailyFocusMessage(new Date(), state.language));
+    }, 60000);
+    return () => clearInterval(timer);
   }, [state.language]);
 
   const [showResetModal, setShowResetModal] = useState(false);
@@ -255,12 +235,6 @@ export const HomeView: React.FC = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
-
-  const triggerAIIntention = async () => {
-    const mainMood = state.reflections[0]?.moods?.[0] || 'Calm';
-    const mantra = await generateAIIntention(mainMood);
-    setGeneratedIntention(mantra);
-  };
 
   const handleResetClock = () => {
     setSobrietyStartDate(new Date().toISOString());
@@ -554,9 +528,9 @@ export const HomeView: React.FC = () => {
         </div>
       </section>
 
-      {/* Focus / Intention Card (Moved ABOVE the start ritual and check circular buttons) */}
+      {/* Focus Message Card (Changes automatically every day without asking for a new intention) */}
       <section className="max-w-xl mx-auto w-full z-10 border-t border-black/5 pt-4 mt-1 px-4">
-        <div className="bg-white/40 rounded-3xl py-5 px-5 border border-black/5 shadow-sm text-center relative overflow-hidden">
+        <div className="bg-white/40 rounded-3xl py-5 px-6 border border-black/5 shadow-sm text-center relative overflow-hidden">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Sparkles className="w-3.5 h-3.5 text-black/60" />
             <h2 className="font-sans text-[10px] font-bold text-black/60 uppercase tracking-[0.2em]">
@@ -565,34 +539,8 @@ export const HomeView: React.FC = () => {
           </div>
           
           <blockquote className="font-serif text-base md:text-lg text-[#111111] italic leading-relaxed text-center min-h-[48px] transition-all">
-            "{generatedIntention}"
+            "{todayFocusMessage}"
           </blockquote>
-          
-          {limitReached && (
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-900/10 text-amber-900/80 rounded-2xl text-left max-w-lg mx-auto">
-              <p className="font-serif text-xs font-semibold mb-1 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-900" />
-                {getTranslation('ai_limit_reached')}
-              </p>
-              <p className="font-sans text-[11px] leading-relaxed">
-                {getTranslation('ai_limit_desc')}
-              </p>
-            </div>
-          )}
-
-          <div className="mt-5 flex flex-col items-center gap-2">
-            <button
-              onClick={triggerAIIntention}
-              disabled={aiLoading}
-              className="font-sans text-[10px] font-bold text-black uppercase tracking-widest border-b border-black pb-0.5 flex items-center gap-1.5 hover:opacity-70 transition-opacity cursor-pointer disabled:opacity-50"
-            >
-              <BrainCircuit className="w-3 h-3" />
-              {aiLoading ? (getLangText('GENERATING...', 'GENERANDO...', 'GERANDO...')) : getTranslation('new_intention')}
-            </button>
-            <span className="text-[9px] font-sans font-bold tracking-widest text-black/40 uppercase">
-              {getTranslation('ai_remaining_credits')}: {aiUsageCount}/3
-            </span>
-          </div>
         </div>
       </section>
 

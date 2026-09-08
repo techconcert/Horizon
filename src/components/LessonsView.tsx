@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSanctuary } from '../context/SanctuaryContext';
 import { Step, SubLesson } from '../types';
 import { 
@@ -29,6 +29,7 @@ export const LessonsView: React.FC = () => {
 
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [activeSubLessonId, setActiveSubLessonId] = useState<string | null>(null);
+  const [targetSubLessonId, setTargetSubLessonId] = useState<string | null>(null);
   const [reflectionText, setReflectionText] = useState('');
 
 const getText = (en: string, es: string, pt: string) => {
@@ -58,9 +59,32 @@ const getText = (en: string, es: string, pt: string) => {
   const handleBackToSteps = () => {
     if (isPlayingAudio) toggleTTS(''); // stop TTS
     setActiveSubLessonId(null);
+    setTargetSubLessonId(null);
     setReflectionText('');
     setCurrentLessonId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Scroll to and highlight the lesson that was just completed when returning to the lessons list
+  useEffect(() => {
+    if (!activeSubLessonId && targetSubLessonId) {
+      const scrollTimer = setTimeout(() => {
+        const el = document.getElementById(`sublesson-${targetSubLessonId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 50);
+
+      const clearTimer = setTimeout(() => {
+        setTargetSubLessonId(null);
+      }, 3000);
+
+      return () => {
+        clearTimeout(scrollTimer);
+        clearTimeout(clearTimer);
+      };
+    }
+  }, [activeSubLessonId, targetSubLessonId]);
 
   const activeStep = steps.find(s => s.id === state.currentLessonId);
   const activeSubLesson = activeStep?.subLessons.find(s => s.id === activeSubLessonId);
@@ -70,14 +94,20 @@ const getText = (en: string, es: string, pt: string) => {
     const isCompleted = activeSubLesson.status === 'READ';
     
     const handleComplete = (withReflection: boolean) => {
+      const completedId = activeSubLesson.id;
       if (withReflection && reflectionText.trim()) {
         addReflection(
-          `${activeSubLesson.title[state.language]} Reflection`, 
+          getText(
+            `${activeSubLesson.title[state.language]} Reflection`,
+            `Reflexión: ${activeSubLesson.title[state.language]}`,
+            `Reflexão: ${activeSubLesson.title[state.language]}`
+          ), 
           reflectionText.trim(), 
           ['Peaceful', 'Content']
         );
       }
       updateSubLessonStatus(activeStep.id, activeSubLesson.id, 'READ');
+      setTargetSubLessonId(completedId);
       setActiveSubLessonId(null);
       setReflectionText('');
       if (isPlayingAudio) toggleTTS('');
@@ -88,26 +118,27 @@ const getText = (en: string, es: string, pt: string) => {
         <button 
           onClick={() => {
             if (isPlayingAudio) toggleTTS('');
+            setTargetSubLessonId(activeSubLesson.id);
             setActiveSubLessonId(null);
             setReflectionText('');
           }}
           className="flex items-center gap-1 text-black/60 hover:text-black font-sans text-xs font-bold uppercase tracking-widest transition-colors self-start cursor-pointer bg-white px-4 py-2 rounded-full border border-black/10"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span>Back to Step {activeStep.number}</span>
+          <span>{getText(`Back to Step ${activeStep.number}`, `Volver al Paso ${activeStep.number}`, `Voltar ao Passo ${activeStep.number}`)}</span>
         </button>
 
         <article className="bg-white rounded-3xl p-6 sm:p-10 border border-black/10 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between mb-6">
             <span className="font-sans text-[10px] font-bold uppercase tracking-widest text-red-900 border border-red-900/20 px-3 py-1 rounded-full">
-              Lesson {activeSubLesson.id.split('-')[1]}
+              {getText(`Lesson ${activeSubLesson.id.split('-')[1]}`, `Lección ${activeSubLesson.id.split('-')[1]}`, `Lição ${activeSubLesson.id.split('-')[1]}`)}
             </span>
             <button
               onClick={() => toggleTTS(activeSubLesson.content[state.language])}
               className="inline-flex items-center gap-1.5 bg-[#E5E1DB] hover:bg-[#D5D1CB] text-black px-4 py-2 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer"
             >
               {isPlayingAudio ? <VolumeX className="w-4 h-4 text-red-900" /> : <Volume2 className="w-4 h-4 text-black" />}
-              <span>{isPlayingAudio ? 'Stop Narrating' : getTranslation('read_to_me')}</span>
+              <span>{isPlayingAudio ? getText('Stop Narrating', 'Detener narración', 'Parar narração') : getTranslation('read_to_me')}</span>
             </button>
           </div>
 
@@ -123,7 +154,7 @@ const getText = (en: string, es: string, pt: string) => {
 
           <div className="bg-[#F8F5F2] border border-black/10 rounded-2xl p-6 mb-8">
             <h3 className="font-serif text-xl font-normal text-black mb-4">
-              Reflection Questions
+              {getTranslation('reflection_questions')}
             </h3>
             <ul className="list-disc pl-5 space-y-3 font-sans text-xs text-black/70">
               {activeSubLesson.reflectionQuestions[state.language].map((q, idx) => (
@@ -140,7 +171,7 @@ const getText = (en: string, es: string, pt: string) => {
             <textarea
               value={reflectionText}
               onChange={e => setReflectionText(e.target.value)}
-              placeholder={getText('Write your thoughts here...', 'Escribe lo que piensas aquí...', 'Escreva o que está pensando aqui...')}
+              placeholder={getTranslation('write_reflection_prompt')}
               className="w-full bg-white border border-black/15 rounded-xl p-4 font-sans text-xs focus:outline-none focus:border-black resize-none text-[#111111] min-h-[100px]"
             />
           </div>
@@ -151,7 +182,7 @@ const getText = (en: string, es: string, pt: string) => {
                 onClick={() => handleComplete(true)}
                 className="bg-black hover:bg-black/80 text-[#F8F5F2] px-6 py-3 rounded-full font-sans text-[10px] font-bold tracking-widest uppercase transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                <span>Save Reflection & Complete</span>
+                <span>{getTranslation('complete_step_btn')}</span>
               </button>
             )}
             <button
@@ -186,18 +217,18 @@ const getText = (en: string, es: string, pt: string) => {
           className="flex items-center gap-1 text-black/60 hover:text-black font-sans text-[10px] font-bold uppercase tracking-widest transition-colors self-start cursor-pointer bg-white px-4 py-2 rounded-full border border-black/10 shadow-sm"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span>Back to All Steps</span>
+          <span>{getText('Back to All Steps', 'Volver a todos los Pasos', 'Voltar para todos os Passos')}</span>
         </button>
 
         <section className="bg-white rounded-3xl p-6 sm:p-8 border border-black/10 shadow-sm">
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="font-sans text-[10px] font-bold uppercase tracking-widest text-red-900 border border-red-900/20 px-3 py-1 rounded-full">
-              Step {activeStep.number}
+              {getText(`Step ${activeStep.number}`, `Paso ${activeStep.number}`, `Passo ${activeStep.number}`)}
             </span>
             {completedCount === totalCount && totalCount > 0 && (
               <span className="bg-black text-[#F8F5F2] text-[9px] font-bold px-3 py-1 rounded-full flex items-center gap-1 uppercase tracking-widest">
                 <Award className="w-3 h-3" />
-                Completed
+                {getText('Completed', 'Completado', 'Concluído')}
               </span>
             )}
           </div>
@@ -212,7 +243,7 @@ const getText = (en: string, es: string, pt: string) => {
           <div className="mt-8 flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3 bg-[#E5E1DB] px-4 py-2 rounded-full">
               <span className="font-sans text-xs font-bold text-black">
-                {progressPercent}% Complete
+                {progressPercent}% {getText('Complete', 'Completado', 'Concluído')}
               </span>
               <span className="text-[10px] text-black/50 font-bold uppercase tracking-widest font-sans">
                 ({completedCount}/{totalCount})
@@ -231,21 +262,32 @@ const getText = (en: string, es: string, pt: string) => {
         <section className="flex flex-col gap-4">
           {activeStep.subLessons.map((sub: SubLesson, i: number) => {
             const isCompleted = sub.status === 'READ';
+            const isTarget = targetSubLessonId === sub.id;
             
             return (
               <article 
                 key={sub.id} 
-                onClick={() => setActiveSubLessonId(sub.id)}
-                className={`bg-white rounded-3xl p-6 border transition-all duration-300 relative overflow-hidden group cursor-pointer hover:shadow-md ${
+                id={`sublesson-${sub.id}`}
+                onClick={() => {
+                  setActiveSubLessonId(sub.id);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`bg-white rounded-3xl p-6 border transition-all duration-500 relative overflow-hidden group cursor-pointer hover:shadow-md ${
+                  isTarget ? 'ring-2 ring-[#3e6355] shadow-lg bg-emerald-50/20 ' : ''
+                }${
                   isCompleted ? 'border-black/30 bg-[#F8F5F2]' : 'border-black/10 hover:border-black/30'
                 }`}
               >
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-black/5 group-hover:bg-black/20 transition-colors" />
+                <div className={`absolute top-0 left-0 w-1.5 h-full transition-colors ${
+                  isTarget ? 'bg-[#3e6355]' : 'bg-black/5 group-hover:bg-black/20'
+                }`} />
                 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex-grow">
                     <div className="flex items-center gap-2.5 mb-2">
-                      <span className="w-6 h-6 rounded-md border border-black/15 bg-[#E5E1DB] text-black flex items-center justify-center font-sans text-[10px] font-bold">
+                      <span className={`w-6 h-6 rounded-md border flex items-center justify-center font-sans text-[10px] font-bold ${
+                        isTarget ? 'border-[#3e6355]/30 bg-[#3e6355] text-white' : 'border-black/15 bg-[#E5E1DB] text-black'
+                      }`}>
                         {i + 1}
                       </span>
                       <h3 className="font-serif text-xl font-normal text-black group-hover:text-amber-950 transition-colors">
@@ -259,13 +301,15 @@ const getText = (en: string, es: string, pt: string) => {
                   
                   <div className="sm:shrink-0 flex items-center gap-2 pl-8.5 sm:pl-0">
                     {isCompleted ? (
-                      <div className="flex items-center gap-1.5 text-black bg-[#E5E1DB] px-4 py-2 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest">
+                      <div className={`flex items-center gap-1.5 px-4 py-2 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${
+                        isTarget ? 'bg-[#3e6355] text-white' : 'text-black bg-[#E5E1DB]'
+                      }`}>
                         <Check className="w-4 h-4" />
-                        <span>Re-read</span>
+                        <span>{isTarget ? getText('Just Completed', 'Recién completado', 'Recém concluído') : getText('Re-read', 'Releer', 'Reler')}</span>
                       </div>
                     ) : (
                       <button className="bg-black text-white px-5 py-2.5 rounded-full font-sans text-[10px] font-bold tracking-widest uppercase transition-all shadow-none group-hover:shadow-md">
-                        Start
+                        {getText('Start', 'Iniciar', 'Começar')}
                       </button>
                     )}
                   </div>
@@ -308,10 +352,11 @@ const getText = (en: string, es: string, pt: string) => {
 
           return (
             <article 
-              key={step.id}
+              key={step.id} 
               onClick={() => {
                 if (!step.locked) {
                   setCurrentLessonId(step.id);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
               }}
               className={`rounded-3xl p-6 border transition-all duration-300 relative flex flex-col h-full ${
@@ -323,12 +368,12 @@ const getText = (en: string, es: string, pt: string) => {
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-sans text-[10px] font-bold uppercase tracking-widest text-red-900 bg-red-900/5 px-2 py-1 rounded-md">
-                    Step {step.number}
+                    {getText(`Step ${step.number}`, `Paso ${step.number}`, `Passo ${step.number}`)}
                   </span>
                   {isAllCompleted && (
                     <span className="bg-black text-[#F8F5F2] text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 uppercase tracking-widest">
                       <Award className="w-3 h-3" />
-                      Complete
+                      {getText('Complete', 'Completado', 'Concluído')}
                     </span>
                   )}
                 </div>

@@ -799,7 +799,7 @@ export const TrackersView: React.FC = () => {
             <form onSubmit={handleSaveReflection} className="flex flex-col gap-4">
               <div className="flex gap-2 items-center flex-wrap">
                 <span className="font-sans text-[9px] font-bold text-black/50 uppercase tracking-widest mr-1">
-                  Tags:
+                  {getText('Tags:', 'Etiquetas:', 'Etiquetas:')}
                 </span>
                 {selectedMoods.map(m => (
                   <span
@@ -909,7 +909,7 @@ export const TrackersView: React.FC = () => {
                 ) : (
                   filteredReflections.map((ref: Reflection, idx: number) => {
                     const formattedDate = new Date(ref.date).toLocaleDateString(
-                      state.language === 'English' ? 'en-US' : state.language === 'Español' ? 'es-ES' : 'pt-PT',
+                      state.language === 'English' ? 'en-US' : state.language === 'Español' ? 'es-ES' : 'pt-BR',
                       { month: 'short', day: 'numeric', year: 'numeric' }
                     );
 
@@ -968,7 +968,7 @@ export const TrackersView: React.FC = () => {
                               <button
                                 onClick={() => deleteReflection(ref.id)}
                                 className="text-black/40 hover:text-black p-1 rounded-full hover:bg-black/5 transition-colors cursor-pointer"
-                                title="Delete"
+                                title={getText('Delete', 'Eliminar', 'Excluir')}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
