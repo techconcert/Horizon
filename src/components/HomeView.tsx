@@ -8,7 +8,6 @@ import { createPortal } from 'react-dom';
 import { useSanctuary, formatAccumulatedTime } from '../context/SanctuaryContext';
 import { getDailyFocusMessage } from '../data/dailyFocusMessages';
 import {
-  Sparkles,
   Check,
   HeartHandshake,
   RotateCcw,
@@ -740,8 +739,7 @@ export const HomeView: React.FC = () => {
       {/* Focus Message Card (Changes automatically every day without asking for a new intention) */}
       <section className="w-full z-10 pt-1">
         <div className="bg-white/40 rounded-3xl py-5 px-6 border border-black/5 shadow-sm text-center relative overflow-hidden">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-black/60" />
+          <div className="flex items-center justify-center mb-2">
             <h2 className="font-sans text-[10px] font-bold text-black/60 uppercase tracking-[0.2em]">
               {getTranslation('focus_today')}
             </h2>
