@@ -115,6 +115,7 @@ const BREATHING_TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Po
 };
 
 interface PhaseStyle {
+  hex: string;
   outerBg: string;
   innerBg: string;
   textColor: string;
@@ -123,28 +124,32 @@ interface PhaseStyle {
 
 const PHASE_STYLES: Record<'Inhale' | 'Hold' | 'Exhale' | 'Rest', PhaseStyle> = {
   Inhale: {
-    outerBg: 'rgba(180, 210, 195, 0.6)',
+    hex: '#4A6B5D',
+    outerBg: 'rgba(74, 107, 93, 0.12)',
     innerBg: 'bg-[#4A6B5D]',
     textColor: 'text-[#F8F5F2]',
-    borderColor: 'border-[#3D574B]',
+    borderColor: '#4A6B5D',
   },
   Hold: {
-    outerBg: 'rgba(235, 218, 193, 0.6)',
+    hex: '#A38D6F',
+    outerBg: 'rgba(163, 141, 111, 0.12)',
     innerBg: 'bg-[#A38D6F]',
     textColor: 'text-[#F8F5F2]',
-    borderColor: 'border-[#8B775C]',
+    borderColor: '#A38D6F',
   },
   Exhale: {
-    outerBg: 'rgba(188, 204, 219, 0.6)',
+    hex: '#5A7A8C',
+    outerBg: 'rgba(90, 122, 140, 0.12)',
     innerBg: 'bg-[#5A7A8C]',
     textColor: 'text-[#F8F5F2]',
-    borderColor: 'border-[#465E6D]',
+    borderColor: '#5A7A8C',
   },
   Rest: {
-    outerBg: 'rgba(216, 198, 198, 0.6)',
+    hex: '#8C6B70',
+    outerBg: 'rgba(140, 107, 112, 0.12)',
     innerBg: 'bg-[#8C6B70]',
     textColor: 'text-[#F8F5F2]',
-    borderColor: 'border-[#70565A]',
+    borderColor: '#8C6B70',
   },
 };
 
@@ -564,6 +569,29 @@ const getText = (en: string, es: string, pt: string) => {
 
   const currentScale = getBreathingScale();
 
+  const getWaterFillPercentage = () => {
+    if (!isBreathingRunning) return 0;
+    switch (breathingPhase) {
+      case 'Inhale':
+        // Fills from bottom to top (0% -> 100%) like water entering the glass
+        return Math.min(100, Math.max(0, breathingProgress * 100));
+      case 'Hold':
+        // Glass remains full to the brim
+        return 100;
+      case 'Exhale':
+        // Empties from top to bottom (100% -> 0%) like water draining from the glass
+        return Math.min(100, Math.max(0, (1 - breathingProgress) * 100));
+      case 'Rest':
+        // Empty vessel resting before the next breath
+        return 0;
+      default:
+        return 0;
+    }
+  };
+
+  const waterFill = getWaterFillPercentage();
+  const currentPhaseHex = isBreathingRunning ? PHASE_STYLES[breathingPhase].hex : '#4A6B5D';
+
   return (
     <div className="flex flex-col gap-5">
       {/* Sub-tab Navigation */}
@@ -760,40 +788,91 @@ const getText = (en: string, es: string, pt: string) => {
             </div>
 
             <div className="relative w-64 h-64 flex items-center justify-center pointer-events-none">
-              {/* Outer pulsing scaling circle */}
+              {/* Subtle whisper-thin guideline showing max breath expansion boundary */}
               <div
-                className="absolute inset-0 rounded-full transition-all pointer-events-none"
+                className="absolute w-56 h-56 rounded-full border border-black/10 pointer-events-none transition-opacity duration-500"
                 style={{
-                  backgroundColor: isBreathingRunning ? PHASE_STYLES[breathingPhase].outerBg : 'rgba(229, 225, 219, 0.5)',
-                  transform: `scale(${currentScale * 1.15})`,
-                  opacity: isBreathingRunning ? 1 : 0.4,
-                  transition: 'transform 100ms linear, background-color 400ms ease, opacity 400ms ease'
+                  transform: 'scale(1.22)',
+                  opacity: isBreathingRunning ? 0.25 : 0.1,
                 }}
               />
 
-              {/* Inner core circle */}
+              {/* Main Breathing Circle (Glass Vessel) with thin outline */}
               <div
-                className={`relative z-10 w-48 h-48 rounded-full flex flex-col items-center justify-center text-white shadow-none border border-white/5 transition-all duration-300 pointer-events-none ${
-                  isBreathingRunning ? PHASE_STYLES[breathingPhase].innerBg : 'bg-black'
-                }`}
+                className="relative z-10 w-48 h-48 sm:w-52 sm:h-52 rounded-full overflow-hidden flex flex-col items-center justify-center text-white border-[1.5px] pointer-events-none transition-all"
                 style={{
                   transform: `scale(${currentScale})`,
-                  transition: 'transform 100ms linear, background-color 300ms ease'
+                  borderColor: isBreathingRunning ? PHASE_STYLES[breathingPhase].borderColor : 'rgba(0, 0, 0, 0.15)',
+                  backgroundColor: '#161918',
+                  boxShadow: isBreathingRunning
+                    ? `0 10px 25px -4px rgba(0, 0, 0, 0.22), 0 0 0 1px ${PHASE_STYLES[breathingPhase].borderColor}33`
+                    : '0 4px 16px -2px rgba(0, 0, 0, 0.12)',
+                  transition: 'transform 100ms linear, border-color 400ms ease, box-shadow 400ms ease',
                 }}
               >
-                <span className="font-serif text-xl font-normal mb-1.5 text-[#F8F5F2] tracking-wide text-center px-4">
-                  {isBreathingRunning ? getTranslatedPhase(breathingPhase, state.language) : (getText('Breathing', 'Respirando', 'Respirando'))}
-                </span>
-                
-                <span className="font-sans text-[18px] font-bold text-[#F8F5F2] select-none">
-                  {isBreathingRunning ? `${breathingSecondsLeft}s` : '•••'}
-                </span>
+                {/* Water Liquid Body - Fills and empties like a glass of water */}
+                <div
+                  className="absolute bottom-0 left-0 right-0 overflow-visible pointer-events-none"
+                  style={{
+                    height: `${waterFill}%`,
+                    opacity: waterFill > 0 ? 1 : 0,
+                    backgroundColor: currentPhaseHex,
+                    transition: 'height 100ms linear, background-color 400ms ease, opacity 200ms ease',
+                  }}
+                >
+                  {/* Fluid water surface waves */}
+                  {waterFill > 0 && waterFill < 99 && (
+                    <>
+                      {/* Secondary softer wave behind */}
+                      <svg
+                        viewBox="0 0 800 40"
+                        preserveAspectRatio="none"
+                        className="absolute -top-3.5 left-0 w-[200%] h-4 opacity-40 animate-water-wave-slow pointer-events-none"
+                        style={{ color: currentPhaseHex }}
+                      >
+                        <path
+                          d="M 0 20 Q 100 35 200 20 T 400 20 Q 500 35 600 20 T 800 20 L 800 40 L 0 40 Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                      {/* Primary crest wave */}
+                      <svg
+                        viewBox="0 0 800 40"
+                        preserveAspectRatio="none"
+                        className="absolute -top-3 left-0 w-[200%] h-4 animate-water-wave pointer-events-none"
+                        style={{ color: currentPhaseHex }}
+                      >
+                        <path
+                          d="M 0 20 Q 100 5 200 20 T 400 20 Q 500 5 600 20 T 800 20 L 800 40 L 0 40 Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </>
+                  )}
 
-                <span className="font-sans text-[8px] font-bold uppercase tracking-widest text-[#F8F5F2]/60 mt-1.5 text-center px-4 leading-normal max-w-[150px]">
-                  {isBreathingRunning
-                    ? getPhaseInstruction(breathingPhase, state.language)
-                    : getTranslation('current_badge')}
-                </span>
+                  {/* Subtle water depth shading */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-white/15 pointer-events-none" />
+                </div>
+
+                {/* Subtle glass reflection highlight on the curved vessel */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/12 via-transparent to-black/20 pointer-events-none z-10" />
+
+                {/* Center Phase and Timer Content */}
+                <div className="relative z-20 flex flex-col items-center justify-center text-center px-4">
+                  <span className="font-serif text-xl sm:text-2xl font-normal mb-1.5 text-[#F8F5F2] tracking-wide text-center drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
+                    {isBreathingRunning ? getTranslatedPhase(breathingPhase, state.language) : (getText('Breathing', 'Respirando', 'Respirando'))}
+                  </span>
+                  
+                  <span className="font-sans text-[20px] sm:text-[22px] font-bold text-[#F8F5F2] select-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] tracking-tight">
+                    {isBreathingRunning ? `${breathingSecondsLeft}s` : '•••'}
+                  </span>
+
+                  <span className="font-sans text-[8.5px] sm:text-[9px] font-bold uppercase tracking-widest text-[#F8F5F2]/80 mt-1.5 text-center px-4 leading-normal max-w-[140px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+                    {isBreathingRunning
+                      ? getPhaseInstruction(breathingPhase, state.language)
+                      : getTranslation('find_center')}
+                  </span>
+                </div>
               </div>
             </div>
 

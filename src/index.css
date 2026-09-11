@@ -39,6 +39,24 @@
   animation: spin-slow 12s linear infinite;
 }
 
+@keyframes waterWave {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes waterWaveSlow {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.animate-water-wave {
+  animation: waterWave 5s linear infinite;
+}
+
+.animate-water-wave-slow {
+  animation: waterWaveSlow 7.5s linear infinite;
+}
+
 body {
   background-color: #F8F5F2;
   color: #111111;
