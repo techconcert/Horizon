@@ -1,14 +1,16 @@
-const CACHE_NAME = 'horizon-cache-v4';
+const CACHE_NAME = 'horizon-cache-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/favicon.svg',
-  '/icon.svg',
+  '/favicon.png',
+  '/apple-touch-icon.png',
   '/icon-192.png',
   '/icon-512.png',
-  '/favicon.png',
-  '/apple-touch-icon.png'
+  '/horizon_header_1.png',
+  '/horizon_header_2.png',
+  '/horizon_footer_1.png',
+  '/horizon_footer_2.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -55,13 +57,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets (images, icons, fonts)
+  // Static assets (images, icons, fonts) - Cache First, fallback to Network and Cache
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(event.request).catch(() => {
+      return fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return networkResponse;
+      }).catch(() => {
         return new Response('', { status: 404, statusText: 'Not Found' });
       });
     })

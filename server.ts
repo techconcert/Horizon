@@ -178,6 +178,14 @@ Do NOT output any surrounding text. Just the 2-3 sentence paragraph.`;
 
 // Setup Vite or static files serving based on environment
 async function setupServer() {
+  // Set long-lived cache headers for static image assets to prevent unnecessary network requests
+  app.use((req, res, next) => {
+    if (req.path.endsWith('.png') || req.path.endsWith('.svg') || req.path.endsWith('.webp') || req.path.endsWith('.ico')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+    next();
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({

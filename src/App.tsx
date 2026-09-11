@@ -31,8 +31,20 @@ const SanctuaryContent: React.FC = () => {
   // Alternating headers & footers:
   // Header 1 with Footer 1 for Home & Tools; Header 2 with Footer 2 for Trackers & Lessons
   const isAltTheme = state.activeTab === 'trackers' || state.activeTab === 'lessons';
-  const headerSrc = isAltTheme ? '/horizon_header_2.png' : '/horizon_header_1.png';
-  const footerSrc = isAltTheme ? '/horizon_footer_2.png' : '/horizon_footer_1.png';
+
+  // Preload and cache all header/footer images on initial mount so they remain in memory
+  useEffect(() => {
+    const urls = [
+      '/horizon_header_1.png',
+      '/horizon_header_2.png',
+      '/horizon_footer_1.png',
+      '/horizon_footer_2.png',
+    ];
+    urls.forEach((url) => {
+      const img = new Image();
+      img.src = url;
+    });
+  }, []);
 
   if (!state.onboarded) {
     return <OnboardingView />;
@@ -163,7 +175,7 @@ const SanctuaryContent: React.FC = () => {
       {/* Seamless cross-domain migration banner */}
       <MigrationBanner />
 
-      {/* Dynamic alternating page header background using user's uploaded PNGs */}
+      {/* Dynamic alternating page header background using user's uploaded PNGs (both permanently mounted in DOM for instant cache) */}
       <div
         aria-hidden="true"
         className="absolute top-0 inset-x-0 w-full h-36 sm:h-44 md:h-52 lg:h-60 overflow-hidden pointer-events-none z-0 select-none"
@@ -173,10 +185,22 @@ const SanctuaryContent: React.FC = () => {
         }}
       >
         <img
-          key={headerSrc}
-          src={headerSrc}
+          src="/horizon_header_1.png"
           alt=""
-          className="w-full h-full object-fill object-top transition-opacity duration-500 animate-fadeIn"
+          loading="eager"
+          decoding="async"
+          className={`absolute inset-0 w-full h-full object-fill object-top transition-opacity duration-300 ${
+            !isAltTheme ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+        <img
+          src="/horizon_header_2.png"
+          alt=""
+          loading="eager"
+          decoding="async"
+          className={`absolute inset-0 w-full h-full object-fill object-top transition-opacity duration-300 ${
+            isAltTheme ? 'opacity-100' : 'opacity-0'
+          }`}
         />
       </div>
 
@@ -222,7 +246,7 @@ const SanctuaryContent: React.FC = () => {
         {state.activeTab === 'profile' && <ProfileView />}
       </main>
 
-      {/* Dynamic alternating page footer background using user's uploaded PNGs */}
+      {/* Dynamic alternating page footer background using user's uploaded PNGs (both permanently mounted in DOM for instant cache) */}
       <div
         aria-hidden="true"
         className="absolute bottom-[68px] sm:bottom-[72px] inset-x-0 w-full h-36 sm:h-44 md:h-52 lg:h-60 overflow-hidden pointer-events-none z-0 select-none"
@@ -232,10 +256,22 @@ const SanctuaryContent: React.FC = () => {
         }}
       >
         <img
-          key={footerSrc}
-          src={footerSrc}
+          src="/horizon_footer_1.png"
           alt=""
-          className="w-full h-full object-fill object-bottom transition-opacity duration-500 animate-fadeIn"
+          loading="eager"
+          decoding="async"
+          className={`absolute inset-0 w-full h-full object-fill object-bottom transition-opacity duration-300 ${
+            !isAltTheme ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+        <img
+          src="/horizon_footer_2.png"
+          alt=""
+          loading="eager"
+          decoding="async"
+          className={`absolute inset-0 w-full h-full object-fill object-bottom transition-opacity duration-300 ${
+            isAltTheme ? 'opacity-100' : 'opacity-0'
+          }`}
         />
       </div>
 
