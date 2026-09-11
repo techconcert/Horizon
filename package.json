@@ -1,6 +1,6 @@
 {
   "name": "horizon",
-  "version": "2.1.9",
+  "version": "2.1.10",
   "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {

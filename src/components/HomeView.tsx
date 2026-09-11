@@ -22,11 +22,13 @@ import {
 
 interface KeytagBadgeProps {
   totalDays: number;
+  months?: number;
+  years?: number;
   language: 'English' | 'Español' | 'Português';
 }
 
 // NA Keytag Droplet-shaped anniversary badge with official Narcotics Anonymous color milestones
-const NAKeytagBadge: React.FC<KeytagBadgeProps> = ({ totalDays, language }) => {
+const NAKeytagBadge: React.FC<KeytagBadgeProps> = ({ totalDays, months = 0, years = 0, language }) => {
   let value: number | string = 0;
   let unit = '';
   let fullText = '';
@@ -37,9 +39,8 @@ const NAKeytagBadge: React.FC<KeytagBadgeProps> = ({ totalDays, language }) => {
   let textSub = 'rgba(255,255,255,0.95)';
   let holeBorder = 'rgba(255,255,255,0.6)';
 
-  if (totalDays >= 365) {
-    // Transitions to whole years after 365 days (month 12), rounded down to years
-    const years = Math.floor(totalDays / 365);
+  if (years >= 1) {
+    // Whole calendar years milestone (1 Year, 2+ Years)
     value = years;
     if (language === 'Español') unit = years === 1 ? 'año' : 'años';
     else if (language === 'Português') unit = years === 1 ? 'ano' : 'anos';
@@ -63,9 +64,8 @@ const NAKeytagBadge: React.FC<KeytagBadgeProps> = ({ totalDays, language }) => {
       textSub = '#FDE047';
       holeBorder = '#71717A';
     }
-  } else if (totalDays >= 30) {
-    // After 30 days, rounded down to 30-day intervals (1 month, 2 months, etc.) until 365 days
-    const months = Math.floor(totalDays / 30);
+  } else if (months >= 1) {
+    // NA Month fellowship milestones (1 Month, 2 Months, etc.)
     value = months;
     if (language === 'Español') unit = months === 1 ? 'mes' : 'meses';
     else if (language === 'Português') unit = months === 1 ? 'mês' : 'meses';
@@ -120,7 +120,7 @@ const NAKeytagBadge: React.FC<KeytagBadgeProps> = ({ totalDays, language }) => {
       holeBorder = 'rgba(255,255,255,0.6)';
     }
   } else {
-    // Under 30 days: NA White keytag (shows 1 day when under 1 day)
+    // Under 30 days: NA White keytag (shows accumulated active day count, min 1)
     const displayDays = totalDays >= 1 ? totalDays : 1;
     value = displayDays;
     if (language === 'Español') unit = displayDays === 1 ? 'día' : 'días';
@@ -394,7 +394,9 @@ export const HomeView: React.FC = () => {
 
           <div className="shrink-0 flex items-center">
             <NAKeytagBadge
-              totalDays={timeGroundedString.totalDays}
+              totalDays={timeGroundedString.totalAccumulatedDays}
+              months={timeGroundedString.months}
+              years={timeGroundedString.years}
               language={state.language}
             />
           </div>

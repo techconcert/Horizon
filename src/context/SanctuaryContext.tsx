@@ -41,7 +41,18 @@ interface SanctuaryContextType {
   aiLoading: boolean;
   aiUsageCount: number;
   limitReached: boolean;
-  timeGroundedString: { years: number; months: number; days: number; hours: number; minutes: number; seconds: number; totalHours: number; totalDays: number };
+  timeGroundedString: {
+    years: number;
+    months: number;
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    totalHours: number;
+    totalDays: number;
+    accumulatedDays: number;
+    totalAccumulatedDays: number;
+  };
   showSOSModal: boolean;
   setShowSOSModal: (open: boolean) => void;
   setSupportNumber: (val: string) => void;
@@ -249,16 +260,49 @@ export const addMonthsClamped = (baseDate: Date, monthsToAdd: number): Date => {
 
 export const calculateTimeGrounded = (startDateStr?: string | null, customNow?: Date) => {
   if (!startDateStr) {
-    return { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, totalHours: 0, totalDays: 0 };
+    return {
+      years: 0,
+      months: 0,
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+      totalHours: 0,
+      totalDays: 0,
+      accumulatedDays: 0,
+      totalAccumulatedDays: 0
+    };
   }
   const start = parseSobrietyDateSafely(startDateStr);
   if (!start || isNaN(start.getTime())) {
-    return { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, totalHours: 0, totalDays: 0 };
+    return {
+      years: 0,
+      months: 0,
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+      totalHours: 0,
+      totalDays: 0,
+      accumulatedDays: 0,
+      totalAccumulatedDays: 0
+    };
   }
 
   const now = customNow || new Date();
   if (now.getTime() < start.getTime()) {
-    return { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, totalHours: 0, totalDays: 0 };
+    return {
+      years: 0,
+      months: 0,
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+      totalHours: 0,
+      totalDays: 0,
+      accumulatedDays: 0,
+      totalAccumulatedDays: 0
+    };
   }
 
   const totalMs = now.getTime() - start.getTime();
@@ -289,14 +333,44 @@ export const calculateTimeGrounded = (startDateStr?: string | null, customNow?: 
   const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
   const seconds = Math.floor((remainingMs % (1000 * 60)) / 1000);
 
-  return { years, months, days, hours, minutes, seconds, totalHours, totalDays };
+  // In recovery milestones, a partial day in progress counts for the ongoing accumulated progress ("on" day)
+  const hasPartialDay = hours > 0 || minutes > 0 || seconds > 0;
+  const accumulatedDays = hasPartialDay ? days + 1 : days;
+  const totalAccumulatedDays = hasPartialDay ? totalDays + 1 : (totalDays > 0 ? totalDays : (totalMs > 0 ? 1 : 0));
+
+  return {
+    years,
+    months,
+    days,
+    hours,
+    minutes,
+    seconds,
+    totalHours,
+    totalDays,
+    accumulatedDays,
+    totalAccumulatedDays
+  };
 };
 
 export const formatAccumulatedTime = (
-  time: { years: number; months: number; days: number },
+  time: {
+    years: number;
+    months: number;
+    days: number;
+    hours?: number;
+    minutes?: number;
+    seconds?: number;
+    accumulatedDays?: number;
+  },
   lang: 'English' | 'Español' | 'Português'
 ): string => {
-  const { years, months, days } = time;
+  const { years, months, days, hours = 0, minutes = 0, seconds = 0, accumulatedDays } = time;
+  // A partial active day counts for the accumulated progress ("on" day)
+  const hasPartialDay = hours > 0 || minutes > 0 || seconds > 0;
+  const displayDays = accumulatedDays !== undefined
+    ? accumulatedDays
+    : (hasPartialDay ? days + 1 : days);
+
   const parts: string[] = [];
 
   if (years > 0) {
@@ -311,11 +385,11 @@ export const formatAccumulatedTime = (
     else parts.push(`${months} ${months === 1 ? 'Month' : 'Months'}`);
   }
 
-  // Include days if there are remaining days, or if both years and months are 0 (e.g. "12 Days" or "0 Days")
-  if (days > 0 || parts.length === 0) {
-    if (lang === 'Español') parts.push(`${days} ${days === 1 ? 'Día' : 'Días'}`);
-    else if (lang === 'Português') parts.push(`${days} ${days === 1 ? 'Dia' : 'Dias'}`);
-    else parts.push(`${days} ${days === 1 ? 'Day' : 'Days'}`);
+  // Include days if there are remaining days, or if both years and months are 0 (e.g. "11 Days" or "1 Day")
+  if (displayDays > 0 || parts.length === 0) {
+    if (lang === 'Español') parts.push(`${displayDays} ${displayDays === 1 ? 'Día' : 'Días'}`);
+    else if (lang === 'Português') parts.push(`${displayDays} ${displayDays === 1 ? 'Dia' : 'Dias'}`);
+    else parts.push(`${displayDays} ${displayDays === 1 ? 'Day' : 'Days'}`);
   }
 
   return parts.join(', ');
