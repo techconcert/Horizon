@@ -30,8 +30,7 @@ import {
   CheckCircle2,
   Compass,
   AlertTriangle,
-  ArrowRight,
-  PenLine
+  ArrowRight
 } from 'lucide-react';
 
 const STANDARD_MOOD_SCORES: Record<string, number> = {
@@ -164,25 +163,25 @@ export const getMoodScore = (moodName: string): number => {
 };
 
 const MOOD_DESCRIPTIONS: Record<MoodType, { icon: React.ReactNode; color: string; bg: string; activeRing: string }> = {
+  Joyful: { icon: <Laugh className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-amber-600', bg: 'bg-[#FFFDE7]', activeRing: 'ring-amber-600 border-amber-600' },
+  Grateful: { icon: <Heart className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-purple-600', bg: 'bg-[#F5F3FF]', activeRing: 'ring-purple-600 border-purple-600' },
   Hopeful: { icon: <Smile className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-emerald-700', bg: 'bg-[#E8F5E9]', activeRing: 'ring-emerald-700 border-emerald-700' },
   Peaceful: { icon: <Droplet className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-blue-600', bg: 'bg-[#E3F2FD]', activeRing: 'ring-blue-600 border-blue-600' },
-  Grateful: { icon: <Heart className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-rose-600', bg: 'bg-[#FCE4EC]', activeRing: 'ring-rose-600 border-rose-600' },
-  Anxious: { icon: <Activity className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-amber-600', bg: 'bg-[#FFF8E1]', activeRing: 'ring-amber-600 border-amber-600' },
-  Frustrated: { icon: <Frown className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-orange-600', bg: 'bg-[#FFF3E0]', activeRing: 'ring-orange-600 border-orange-600' },
-  Overwhelmed: { icon: <Cloud className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-slate-600', bg: 'bg-[#ECEFF1]', activeRing: 'ring-slate-600 border-slate-600' },
-  Tired: { icon: <Battery className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-neutral-600', bg: 'bg-[#F5F5F5]', activeRing: 'ring-neutral-600 border-neutral-600' },
-  Lonely: { icon: <UserX className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-violet-600', bg: 'bg-[#F3E5F5]', activeRing: 'ring-violet-600 border-violet-600' },
-  Angry: { icon: <Flame className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-red-600', bg: 'bg-[#FFEBEE]', activeRing: 'ring-red-600 border-red-600' },
   Calm: { icon: <Sparkles className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-teal-700', bg: 'bg-[#E0F2F1]', activeRing: 'ring-teal-700 border-teal-700' },
   Content: { icon: <Sun className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-[#3e6355]', bg: 'bg-[#E8F5E9]', activeRing: 'ring-[#3e6355] border-[#3e6355]' },
-  Joyful: { icon: <Laugh className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-amber-600', bg: 'bg-[#FFFDE7]', activeRing: 'ring-amber-600 border-amber-600' },
+  Tired: { icon: <Battery className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-neutral-600', bg: 'bg-[#F5F5F5]', activeRing: 'ring-neutral-600 border-neutral-600' },
+  Lonely: { icon: <UserX className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-indigo-600', bg: 'bg-[#EEF2FF]', activeRing: 'ring-indigo-600 border-indigo-600' },
+  Anxious: { icon: <Activity className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-amber-700', bg: 'bg-[#FFF8E1]', activeRing: 'ring-amber-700 border-amber-700' },
+  Overwhelmed: { icon: <Cloud className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-slate-600', bg: 'bg-[#ECEFF1]', activeRing: 'ring-slate-600 border-slate-600' },
+  Frustrated: { icon: <Frown className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-orange-600', bg: 'bg-[#FFF3E0]', activeRing: 'ring-orange-600 border-orange-600' },
+  Angry: { icon: <Flame className="w-5 h-5 sm:w-5.5 sm:h-5.5" />, color: 'text-red-600', bg: 'bg-[#FFEBEE]', activeRing: 'ring-red-600 border-red-600' },
 };
 
 const ORDERED_MOODS: MoodType[] = [
-  'Hopeful', 'Peaceful', 'Grateful',
-  'Anxious', 'Frustrated', 'Overwhelmed',
-  'Tired', 'Lonely', 'Angry',
-  'Calm', 'Content', 'Joyful'
+  'Joyful', 'Grateful', 'Hopeful',
+  'Peaceful', 'Calm', 'Content',
+  'Tired', 'Lonely', 'Anxious',
+  'Overwhelmed', 'Frustrated', 'Angry'
 ];
 
 const MOOD_TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português', string>> = {
@@ -717,7 +716,7 @@ export const TrackersView: React.FC = () => {
         <div className="flex flex-col gap-5 max-w-2xl mx-auto w-full animate-fadeIn">
           
           {/* Merged Mood Picker and Daily Reflection in one larger box */}
-          <section className="bg-white border border-black/10 px-3.5 py-5 sm:px-6 sm:py-6 shadow-sm rounded-3xl flex flex-col gap-5 sm:gap-6">
+          <section className="bg-white border border-black/10 p-4 sm:p-5 shadow-sm rounded-3xl flex flex-col gap-4 sm:gap-5">
             {/* Mood selection */}
             <div>
               <div className="flex justify-between items-center mb-3">
@@ -734,7 +733,7 @@ export const TrackersView: React.FC = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-4 gap-y-3.5 sm:gap-y-4 gap-x-1 sm:gap-x-2.5">
+              <div className="grid grid-cols-3 gap-y-2.5 sm:gap-y-3.5 gap-x-1.5 sm:gap-x-3">
                 {ORDERED_MOODS.map(mood => {
                   const { icon, color, bg, activeRing } = MOOD_DESCRIPTIONS[mood];
                   const isSelected = selectedMoods.includes(mood);
@@ -744,10 +743,10 @@ export const TrackersView: React.FC = () => {
                       key={mood}
                       type="button"
                       onClick={() => handleMoodSelect(mood)}
-                      className="flex flex-col items-center justify-center group cursor-pointer p-0.5 transition-transform active:scale-95 focus:outline-none"
+                      className="flex flex-col items-center justify-center group cursor-pointer p-0.5 sm:p-1 transition-transform active:scale-95 focus:outline-none"
                     >
                       <div
-                        className={`w-11 h-11 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all duration-200 ${
+                        className={`w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all duration-200 ${
                           isSelected
                             ? `ring-2 ring-offset-2 ${activeRing} ${bg} scale-105 shadow-sm`
                             : `${bg} hover:scale-105 border border-black/[0.04]`
@@ -758,7 +757,7 @@ export const TrackersView: React.FC = () => {
                         </div>
                       </div>
                       <span
-                        className={`mt-1 font-sans text-[11px] sm:text-xs text-center leading-tight tracking-tight transition-colors truncate max-w-[70px] sm:max-w-[85px] ${
+                        className={`mt-1 font-sans text-xs sm:text-[13px] text-center leading-tight tracking-tight transition-colors ${
                           isSelected ? 'font-bold text-black' : 'font-medium text-black/70 group-hover:text-black'
                         }`}
                       >
@@ -776,10 +775,10 @@ export const TrackersView: React.FC = () => {
                       key={moodName}
                       type="button"
                       onClick={() => handleMoodSelect(moodName as any)}
-                      className="flex flex-col items-center justify-center group cursor-pointer p-0.5 transition-transform active:scale-95 focus:outline-none"
+                      className="flex flex-col items-center justify-center group cursor-pointer p-0.5 sm:p-1 transition-transform active:scale-95 focus:outline-none"
                     >
                       <div
-                        className={`w-11 h-11 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all duration-200 ${
+                        className={`w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all duration-200 ${
                           isSelected
                             ? 'ring-2 ring-offset-2 ring-[#3e6355] border-2 border-[#3e6355] bg-[#E8F5E9] scale-105 shadow-sm'
                             : 'bg-[#f5fff8] hover:scale-105 border border-black/[0.04]'
@@ -790,7 +789,7 @@ export const TrackersView: React.FC = () => {
                         </div>
                       </div>
                       <span
-                        className={`mt-1 font-sans text-[11px] sm:text-xs text-center leading-tight tracking-tight truncate max-w-[70px] sm:max-w-[85px] transition-colors ${
+                        className={`mt-1 font-sans text-xs sm:text-[13px] text-center leading-tight tracking-tight truncate max-w-[85px] transition-colors ${
                           isSelected ? 'font-bold text-black' : 'font-medium text-black/70 group-hover:text-black'
                         }`}
                       >
@@ -803,31 +802,22 @@ export const TrackersView: React.FC = () => {
             </div>
 
             {/* Reflection form */}
-            <form onSubmit={handleSaveReflection} className="flex flex-col gap-4 border-t border-black/5 pt-4">
-              <div className="bg-[#FAF8F5] border border-black/10 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-2.5">
-                <div className="flex items-center gap-2 text-black/80 pb-0.5">
-                  <PenLine className="w-4 h-4 text-black/60 shrink-0" />
-                  <span className="font-sans text-xs sm:text-sm font-medium">
-                    {getText('Add a reflection (optional)', 'Añadir reflexión (opcional)', 'Adicionar reflexão (opcional)')}
-                  </span>
-                </div>
+            <form onSubmit={handleSaveReflection} className="flex flex-col gap-3.5 border-t border-black/5 pt-4">
+              <input
+                type="text"
+                placeholder={getText('Reflection Title (Optional)', 'Título (Opcional)', 'Título (Opcional)')}
+                value={reflectionTitle}
+                onChange={e => setReflectionTitle(e.target.value)}
+                className="w-full bg-[#F8F5F2] border border-black/10 rounded-2xl p-3 font-sans text-xs focus:outline-none focus:border-black text-[#111111]"
+              />
 
-                <input
-                  type="text"
-                  placeholder={getText('Reflection Title (Optional)', 'Título (Opcional)', 'Título (Opcional)')}
-                  value={reflectionTitle}
-                  onChange={e => setReflectionTitle(e.target.value)}
-                  className="w-full bg-white border border-black/10 rounded-xl p-2.5 font-sans text-xs focus:outline-none focus:border-black text-[#111111]"
-                />
-
-                <textarea
-                  rows={3}
-                  value={reflectionContent}
-                  onChange={e => setReflectionContent(e.target.value)}
-                  placeholder={t('reflection_placeholder')}
-                  className="w-full bg-white border border-black/10 rounded-xl p-3 font-sans text-xs focus:outline-none focus:border-black resize-none text-[#111111] leading-relaxed"
-                />
-              </div>
+              <textarea
+                rows={3}
+                value={reflectionContent}
+                onChange={e => setReflectionContent(e.target.value)}
+                placeholder={t('reflection_placeholder')}
+                className="w-full bg-[#F8F5F2] border border-black/10 rounded-2xl p-3.5 font-sans text-xs focus:outline-none focus:border-black resize-none text-[#111111] leading-relaxed"
+              />
 
               <button
                 type="submit"
@@ -931,7 +921,11 @@ export const TrackersView: React.FC = () => {
                             <div className="flex flex-wrap items-center justify-center gap-1 mt-2.5 max-w-[70px]">
                               {ref.moods?.map(m => {
                                 const moodStyle = MOOD_DESCRIPTIONS[m];
-                                const iconNode = moodStyle ? moodStyle.icon : <Sparkles className="w-3.5 h-3.5" />;
+                                const iconNode = moodStyle ? (
+                                  <span className="[&>svg]:w-3.5 [&>svg]:h-3.5 flex items-center justify-center">
+                                    {moodStyle.icon}
+                                  </span>
+                                ) : <Sparkles className="w-3.5 h-3.5" />;
                                 return (
                                   <div
                                     key={m}
