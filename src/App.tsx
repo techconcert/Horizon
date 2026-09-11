@@ -78,7 +78,9 @@ const SanctuaryContent: React.FC = () => {
           <p className="font-sans text-xs text-[#444444] mb-8 max-w-xs leading-relaxed">
             {state.language === 'English'
               ? 'Enter any 4-digit passcode or touch the fingerprint scanner to unlock your private recovery records.'
-              : 'Ingresa cualquier código de 4 dígitos o toca el lector para desbloquear tu registro privado.'}
+              : state.language === 'Español'
+              ? 'Ingresa cualquier código de 4 dígitos o toca el lector para desbloquear tu registro privado.'
+              : 'Insira qualquer código de 4 dígitos ou toque no leitor para desbloquear seu registro privado.'}
           </p>
 
           {/* Bullet Indicators */}

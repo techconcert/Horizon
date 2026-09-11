@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useSanctuary, formatAccumulatedTime } from '../context/SanctuaryContext';
 import { getDailyFocusMessage } from '../data/dailyFocusMessages';
@@ -17,7 +17,9 @@ import {
   Info,
   Flower2,
   FileText,
-  Calendar
+  Calendar,
+  ArrowDown,
+  RefreshCw
 } from 'lucide-react';
 
 interface KeytagBadgeProps {
@@ -197,7 +199,8 @@ export const HomeView: React.FC = () => {
     timeGroundedString,
     setActiveTab,
     setSobrietyStartDate,
-    toggleSoberCheckIn
+    toggleSoberCheckIn,
+    syncToCloud
   } = useSanctuary();
   const getLangText = (en: string, es: string, pt: string) => {
     if (state.language === 'English') return en;
@@ -235,6 +238,191 @@ export const HomeView: React.FC = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Swipe Down to Refresh state & gesture handlers
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshed, setIsRefreshed] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef(0);
+  const isPullingRef = useRef(false);
+  const isMouseDraggingRef = useRef(false);
+  const mouseStartYRef = useRef(0);
+  const hasTriggeredHapticRef = useRef(false);
+  const pullDistanceRef = useRef(0);
+  const isRefreshingRef = useRef(false);
+
+  const PULL_THRESHOLD = 58;
+  const MAX_PULL_DISTANCE = 80;
+
+  useEffect(() => {
+    pullDistanceRef.current = pullDistance;
+  }, [pullDistance]);
+
+  useEffect(() => {
+    isRefreshingRef.current = isRefreshing;
+  }, [isRefreshing]);
+
+  const triggerRefresh = async () => {
+    setIsRefreshing(true);
+    setIsRefreshed(false);
+    setPullDistance(52);
+
+    try {
+      // 1. Refresh today's focus message (re-evaluates current date and language)
+      setTodayFocusMessage(getDailyFocusMessage(new Date(), state.language));
+
+      // 2. Refresh second clock ticks
+      setLiveSeconds(new Date().getSeconds());
+
+      // 3. Trigger cloud sync if available
+      if (syncToCloud) {
+        await Promise.race([
+          syncToCloud(),
+          new Promise((resolve) => setTimeout(resolve, 2000)),
+        ]);
+      }
+
+      // 4. Minimum duration for smooth haptic perception
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      setIsRefreshed(true);
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([15, 30, 15]);
+      }
+
+      setTimeout(() => {
+        setPullDistance(0);
+        setTimeout(() => {
+          setIsRefreshing(false);
+          setIsRefreshed(false);
+        }, 300);
+      }, 500);
+    } catch (err) {
+      console.warn('Swipe refresh error:', err);
+      setPullDistance(0);
+      setIsRefreshing(false);
+      setIsRefreshed(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      if (scrollY <= 2 && e.touches.length === 1 && !isRefreshingRef.current) {
+        touchStartYRef.current = e.touches[0].clientY;
+        isPullingRef.current = true;
+        hasTriggeredHapticRef.current = false;
+        setIsDragging(true);
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isPullingRef.current || isRefreshingRef.current) return;
+      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      if (scrollY > 2) {
+        isPullingRef.current = false;
+        setIsDragging(false);
+        setPullDistance(0);
+        return;
+      }
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - touchStartYRef.current;
+      if (diff > 0) {
+        if (e.cancelable && diff > 8) {
+          e.preventDefault();
+        }
+        const damped = Math.min(Math.pow(diff, 0.82) * 1.5, MAX_PULL_DISTANCE);
+        setPullDistance(damped);
+        if (damped >= PULL_THRESHOLD && !hasTriggeredHapticRef.current) {
+          hasTriggeredHapticRef.current = true;
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(10);
+          }
+        } else if (damped < PULL_THRESHOLD) {
+          hasTriggeredHapticRef.current = false;
+        }
+      } else {
+        setPullDistance(0);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (!isPullingRef.current) return;
+      isPullingRef.current = false;
+      setIsDragging(false);
+      if (pullDistanceRef.current >= PULL_THRESHOLD && !isRefreshingRef.current) {
+        triggerRefresh();
+      } else {
+        setPullDistance(0);
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isMouseDraggingRef.current || isRefreshingRef.current) return;
+      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      if (scrollY > 2) {
+        isMouseDraggingRef.current = false;
+        setIsDragging(false);
+        setPullDistance(0);
+        return;
+      }
+      const diff = e.clientY - mouseStartYRef.current;
+      if (diff > 0) {
+        const damped = Math.min(Math.pow(diff, 0.82) * 1.5, MAX_PULL_DISTANCE);
+        setPullDistance(damped);
+        if (damped >= PULL_THRESHOLD && !hasTriggeredHapticRef.current) {
+          hasTriggeredHapticRef.current = true;
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(10);
+          }
+        } else if (damped < PULL_THRESHOLD) {
+          hasTriggeredHapticRef.current = false;
+        }
+      } else {
+        setPullDistance(0);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (!isMouseDraggingRef.current) return;
+      isMouseDraggingRef.current = false;
+      setIsDragging(false);
+      if (pullDistanceRef.current >= PULL_THRESHOLD && !isRefreshingRef.current) {
+        triggerRefresh();
+      } else {
+        setPullDistance(0);
+      }
+    };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [state.language]);
+
+  const handleContainerMouseDown = (e: React.MouseEvent) => {
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    if (e.button === 0 && scrollY <= 2 && !isRefreshingRef.current) {
+      mouseStartYRef.current = e.clientY;
+      isMouseDraggingRef.current = true;
+      hasTriggeredHapticRef.current = false;
+      setIsDragging(true);
+    }
+  };
 
   const handleResetClock = () => {
     setSobrietyStartDate(new Date().toISOString());
@@ -300,7 +488,7 @@ export const HomeView: React.FC = () => {
       },
       how_it_knows_desc: {
         English: 'Recovery thrives on absolute honesty. The app doesn\'t spy on you—it relies on your conscious confirmation. If you experience a relapse, you can compassionately reset the clock to begin a brand-new 24-hour cycle of healing with no judgment.',
-        Español: 'La recuperación florece con la honestidad absoluta. La aplicación no te espía, depende de tu confirmación consciente. Si sufres una recaída, puedes reiniciar el reloj con compasão para comenzar de nuevo sin juicio.',
+        Español: 'La recuperación florece con la honestidad absoluta. La aplicación no te espía, depende de tu confirmación consciente. Si sufres una recaída, puedes reiniciar el reloj con compasión para comenzar de nuevo sin juicio.',
         Português: 'A recuperação floresce com honestidade absoluta. O aplicativo não espiona você — ele depende da sua confirmação consciente. Se você tiver uma recaída, pode reiniciar o relógio com autocompaixão para iniciar um ciclo limpo sem julgamentos.'
       },
       reset_btn: {
@@ -373,7 +561,58 @@ export const HomeView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-5 items-center justify-center max-w-2xl mx-auto w-full">
+    <div 
+      ref={containerRef}
+      onMouseDown={handleContainerMouseDown}
+      className="flex flex-col gap-5 items-center justify-center max-w-2xl mx-auto w-full relative"
+    >
+      {/* Swipe Down to Refresh Indicator */}
+      <div
+        className="w-full flex items-center justify-center overflow-hidden pointer-events-none select-none -mt-1"
+        style={{
+          height: `${pullDistance}px`,
+          opacity: pullDistance > 6 ? Math.min(1, pullDistance / 35) : 0,
+          transition: isDragging ? 'none' : 'height 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-out'
+        }}
+        aria-live="polite"
+      >
+        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 border border-black/10 shadow-xs text-black/75 backdrop-blur-xs">
+          {isRefreshing ? (
+            <>
+              <RefreshCw className="w-3.5 h-3.5 text-[#3e6355] animate-spin" />
+              <span className="font-sans text-[11px] font-semibold tracking-wide text-black/80">
+                {getLangText('Refreshing...', 'Actualizando...', 'Atualizando...')}
+              </span>
+            </>
+          ) : isRefreshed ? (
+            <>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+              <span className="font-sans text-[11px] font-bold tracking-wide text-emerald-800">
+                {getLangText('Refreshed', 'Actualizado', 'Atualizado')}
+              </span>
+            </>
+          ) : pullDistance >= PULL_THRESHOLD ? (
+            <>
+              <ArrowDown className="w-3.5 h-3.5 text-[#3e6355] transform rotate-180 transition-transform duration-200" />
+              <span className="font-sans text-[11px] font-semibold tracking-wide text-[#3e6355]">
+                {getLangText('Release to refresh', 'Suelta para actualizar', 'Solte para atualizar')}
+              </span>
+            </>
+          ) : (
+            <>
+              <ArrowDown
+                className="w-3.5 h-3.5 text-black/50 transition-transform duration-75"
+                style={{
+                  transform: `rotate(${Math.min(180, (pullDistance / PULL_THRESHOLD) * 180)}deg)`
+                }}
+              />
+              <span className="font-sans text-[11px] font-medium tracking-wide text-black/60">
+                {getLangText('Pull down to refresh', 'Desliza para actualizar', 'Puxe para atualizar')}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
       
       {/* 1. Thin Tile at Top: Accumulated Progress with NA Keytag Droplet Badge */}
       <section className="w-full z-20">
