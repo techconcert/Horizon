@@ -26,7 +26,7 @@ export const NavBar: React.FC = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 w-full z-50 flex justify-center items-center px-4 py-3 bg-[#F5F2EB]/95 backdrop-blur-md border-t border-black/10 shadow-lg pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 w-full z-50 flex justify-center items-center px-4 py-3 bg-[#F8F5F2] border-t border-black/10 shadow-lg pb-safe">
       <div className="flex justify-around items-center w-full max-w-xl mx-auto py-1">
         {navItems.map(({ tab, labelKey, icon, isRed, onClick }) => {
           const isActive = state.activeTab === tab;

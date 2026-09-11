@@ -28,6 +28,12 @@ const SanctuaryContent: React.FC = () => {
     setSessionUnlocked(true);
   }, []);
 
+  // Alternating headers & footers:
+  // Header 1 with Footer 1 for Home & Tools; Header 2 with Footer 2 for Trackers & Lessons
+  const isAltTheme = state.activeTab === 'trackers' || state.activeTab === 'lessons';
+  const headerSrc = isAltTheme ? '/horizon_header_2.png' : '/horizon_header_1.png';
+  const footerSrc = isAltTheme ? '/horizon_footer_2.png' : '/horizon_footer_1.png';
+
   if (!state.onboarded) {
     return <OnboardingView />;
   }
@@ -157,16 +163,30 @@ const SanctuaryContent: React.FC = () => {
       {/* Seamless cross-domain migration banner */}
       <MigrationBanner />
 
-      {/* Editorial side margins or clean top header */}
-      <div className="absolute top-0 inset-x-0 h-1 bg-black z-50" />
+      {/* Dynamic alternating page header background using user's uploaded PNGs */}
+      <div
+        aria-hidden="true"
+        className="absolute top-0 inset-x-0 w-full h-36 sm:h-44 md:h-52 lg:h-60 overflow-hidden pointer-events-none z-0 select-none"
+        style={{
+          maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.45) 25%, rgba(0,0,0,0.30) 60%, rgba(0,0,0,0.00) 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.45) 25%, rgba(0,0,0,0.30) 60%, rgba(0,0,0,0.00) 100%)',
+        }}
+      >
+        <img
+          key={headerSrc}
+          src={headerSrc}
+          alt=""
+          className="w-full h-full object-fill object-top transition-opacity duration-500 animate-fadeIn"
+        />
+      </div>
 
-      {/* Responsive Header Navigation Bar */}
-      <header className="sticky top-0 w-full bg-[#F8F5F2]/90 backdrop-blur-md border-b border-black/10 z-40 px-4 md:px-8 py-3 flex items-center justify-between">
+      {/* Top Header Navigation Bar (non-sticky, scrolls with page) */}
+      <header className="relative w-full z-40 px-4 md:px-8 py-3 flex items-center justify-between bg-transparent">
         <div className="flex flex-col">
-          <h1 className="font-serif text-2xl md:text-3xl text-[#111111] font-normal tracking-tight">
+          <h1 className="font-serif text-2xl md:text-3xl text-[#143224] font-semibold tracking-tight drop-shadow-[0_1px_2px_rgba(255,255,255,0.7)]">
             {getTranslation('app_title')}
           </h1>
-          <span className="hidden md:inline-block font-sans text-[10px] font-bold text-black/50 tracking-widest uppercase mt-1">
+          <span className="hidden md:inline-block font-sans text-[10px] font-bold text-[#143224]/70 tracking-widest uppercase mt-0.5">
             {getTranslation('step_chip')}
           </span>
         </div>
@@ -174,17 +194,17 @@ const SanctuaryContent: React.FC = () => {
         {/* Right Action: Cloud Sync status & Profile button */}
         <div className="flex items-center gap-3">
           {state.syncEnabled && (
-            <div className="hidden sm:flex items-center gap-1.5 text-black bg-[#E5E1DB] border border-black/5 rounded-full px-3 py-1 text-[9px] font-bold tracking-widest uppercase">
+            <div className="hidden sm:flex items-center gap-1.5 text-[#143224] bg-[#E5E1DB]/90 backdrop-blur-xs border border-[#143224]/10 rounded-full px-3 py-1 text-[9px] font-bold tracking-widest uppercase shadow-2xs">
               <RefreshCw className="w-2.5 h-2.5 animate-spin-slow" />
               <span>{isEn ? 'Synced' : isEs ? 'Sincronizado' : 'Sincronizado'}</span>
             </div>
           )}
           <button
             onClick={() => setActiveTab('profile')}
-            className={`w-8 h-8 rounded-full flex items-center justify-center select-none shadow-none border transition-all cursor-pointer ${
+            className={`w-8 h-8 rounded-full flex items-center justify-center select-none border transition-all cursor-pointer shadow-xs ${
               state.activeTab === 'profile'
-                ? 'bg-[#3e6355] border-[#3e6355] text-[#F8F5F2] scale-105'
-                : 'bg-black border-black text-[#F8F5F2] hover:bg-black/80'
+                ? 'bg-[#3e6355] border-[#3e6355] text-[#F8F5F2] scale-105 ring-2 ring-[#3e6355]/30'
+                : 'bg-[#183628] border-[#183628] text-[#F8F5F2] hover:bg-[#254d3b]'
             }`}
             title={isEn ? 'Profile' : isEs ? 'Perfil' : 'Perfil'}
           >
@@ -201,6 +221,23 @@ const SanctuaryContent: React.FC = () => {
         {state.activeTab === 'lessons' && <LessonsView />}
         {state.activeTab === 'profile' && <ProfileView />}
       </main>
+
+      {/* Dynamic alternating page footer background using user's uploaded PNGs */}
+      <div
+        aria-hidden="true"
+        className="absolute bottom-[68px] sm:bottom-[72px] inset-x-0 w-full h-36 sm:h-44 md:h-52 lg:h-60 overflow-hidden pointer-events-none z-0 select-none"
+        style={{
+          maskImage: 'linear-gradient(to top, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.45) 25%, rgba(0,0,0,0.30) 60%, rgba(0,0,0,0.00) 100%)',
+          WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.45) 25%, rgba(0,0,0,0.30) 60%, rgba(0,0,0,0.00) 100%)',
+        }}
+      >
+        <img
+          key={footerSrc}
+          src={footerSrc}
+          alt=""
+          className="w-full h-full object-fill object-bottom transition-opacity duration-500 animate-fadeIn"
+        />
+      </div>
 
       {/* Navigation panel */}
       <NavBar />
