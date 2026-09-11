@@ -376,7 +376,7 @@ export const HomeView: React.FC = () => {
     <div className="flex flex-col gap-5 items-center justify-center max-w-2xl mx-auto w-full">
       
       {/* 1. Thin Tile at Top: Accumulated Progress with NA Keytag Droplet Badge */}
-      <section className="w-full max-w-xl mx-auto px-4 z-20">
+      <section className="w-full z-20">
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
@@ -404,14 +404,14 @@ export const HomeView: React.FC = () => {
       </section>
 
       {/* 2. Tile for Daily Progress of 'Just for Today' wrapping progress, renew, and reset */}
-      <section className="w-full max-w-xl mx-auto px-4 z-20">
+      <section className="w-full z-20">
         <div className={`border rounded-3xl p-3.5 sm:p-4 md:p-5 shadow-sm flex flex-col gap-2.5 sm:gap-3 relative transition-all duration-300 ${
           state.soberCheckedInToday
             ? 'bg-[#e2f1ec] border-emerald-800/20'
             : 'bg-white border-black/10'
         }`}>
           {/* Header row */}
-          <div className="flex items-center justify-between pb-2 border-b border-black/5">
+          <div className="flex items-center justify-between pb-1">
             <div className="flex items-center gap-2 min-w-0">
               <Calendar className="w-4 h-4 text-[#3e6355] shrink-0" />
               <h3 className="font-sans text-xs md:text-sm font-extrabold text-black uppercase tracking-widest whitespace-nowrap">
@@ -461,7 +461,7 @@ export const HomeView: React.FC = () => {
           </div>
 
           {/* Side-by-Side Commitment & Reset Oval Buttons inside this tile */}
-          <div className="flex gap-2.5 w-full pt-2 border-t border-black/5">
+          <div className="flex gap-2.5 w-full pt-1">
             {/* Renew Commitment Button */}
             <button
               type="button"
@@ -499,7 +499,7 @@ export const HomeView: React.FC = () => {
       </section>
 
       {/* Focus Message Card (Changes automatically every day without asking for a new intention) */}
-      <section className="max-w-xl mx-auto w-full z-10 border-t border-black/5 pt-4 mt-1 px-4">
+      <section className="w-full z-10 pt-1">
         <div className="bg-white/40 rounded-3xl py-5 px-6 border border-black/5 shadow-sm text-center relative overflow-hidden">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Sparkles className="w-3.5 h-3.5 text-black/60" />
@@ -515,7 +515,7 @@ export const HomeView: React.FC = () => {
       </section>
 
       {/* Action Buttons: Start Ritual and Check In Navigation (Moved BELOW Focus/Intention Card) */}
-      <section className="flex items-center justify-center gap-8 z-20 w-full border-t border-black/5 pt-5">
+      <section className="flex items-center justify-center gap-8 z-20 w-full pt-1">
         {/* Start Ritual button */}
         <button
           onClick={() => setActiveTab('tools')}

@@ -274,9 +274,9 @@ export const TrackersView: React.FC = () => {
         Português: 'Tendências'
       },
       mood_selection: {
-        English: 'Mood Selection',
-        Español: 'Selección de Ánimo',
-        Português: 'Seleção de Humor'
+        English: 'Reflection',
+        Español: 'Reflexión',
+        Português: 'Reflexão'
       },
       custom_mood: {
         English: 'Custom',
@@ -708,109 +708,95 @@ export const TrackersView: React.FC = () => {
       {activeSubTab === 'checkin' && (
         <div className="flex flex-col gap-5 max-w-2xl mx-auto w-full animate-fadeIn">
           
-          {/* Mood selection box */}
-          <section className="bg-white border border-black/10 p-4 shadow-sm rounded-3xl">
-            <div className="flex justify-between items-center mb-4 border-b border-black/5 pb-2">
-              <h3 className="font-sans text-xs font-bold text-[#111111] uppercase tracking-widest">
-                {t('mood_selection')}
-              </h3>
-              <button
-                onClick={() => setShowCustomMoodModal(true)}
-                className="text-black hover:opacity-75 font-sans text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 cursor-pointer transition-colors border-b border-black pb-0.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                {t('custom_mood')}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-              {Object.keys(MOOD_DESCRIPTIONS).map(moodName => {
-                const mood = moodName as MoodType;
-                const { icon, color } = MOOD_DESCRIPTIONS[mood];
-                const isSelected = selectedMoods.includes(mood);
-
-                return (
-                  <button
-                    key={mood}
-                    onClick={() => handleMoodSelect(mood)}
-                    className={`flex flex-col items-center p-3 rounded-2xl border transition-all duration-200 group cursor-pointer ${
-                      isSelected
-                        ? 'border-black bg-black text-[#F8F5F2] shadow-none'
-                        : 'border-black/10 bg-white text-[#111111] hover:bg-[#E5E1DB]'
-                    }`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-colors ${
-                        isSelected ? 'text-[#F8F5F2]' : color
-                      }`}
-                    >
-                      {icon}
-                    </div>
-                    <span
-                      className={`font-sans text-[9px] font-bold uppercase tracking-wider text-center leading-tight ${
-                        isSelected ? 'text-[#F8F5F2]' : 'text-black/60'
-                      }`}
-                    >
-                      {getTranslatedMood(mood)}
-                    </span>
-                  </button>
-                );
-              })}
-
-              {/* Custom Moods Grid */}
-              {state.customMoods.map(moodName => {
-                const isSelected = selectedMoods.includes(moodName as any);
-                return (
-                  <button
-                    key={moodName}
-                    onClick={() => handleMoodSelect(moodName as any)}
-                    className={`flex flex-col items-center p-3 rounded-2xl border transition-all duration-200 group cursor-pointer ${
-                      isSelected
-                        ? 'border-black bg-black text-[#F8F5F2]'
-                        : 'border-black/10 bg-white text-[#111111] hover:bg-[#E5E1DB]'
-                    }`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-colors ${
-                        isSelected ? 'text-[#F8F5F2]' : 'text-[#3e6355]'
-                      }`}
-                    >
-                      <Sparkles className="w-5 h-5" />
-                    </div>
-                    <span
-                      className={`font-sans text-[9px] font-bold uppercase tracking-wider text-center leading-tight truncate w-full ${
-                        isSelected ? 'text-[#F8F5F2]' : 'text-black/60'
-                      }`}
-                    >
-                      {moodName}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Daily Reflection form */}
-          <section className="bg-white border border-black/10 p-4 shadow-sm rounded-3xl">
-            <h3 className="font-serif text-base font-normal text-black mb-3">
-              {t('daily_reflection')}
-            </h3>
-            
-            <form onSubmit={handleSaveReflection} className="flex flex-col gap-4">
-              <div className="flex gap-2 items-center flex-wrap">
-                <span className="font-sans text-[9px] font-bold text-black/50 uppercase tracking-widest mr-1">
-                  {getText('Tags:', 'Etiquetas:', 'Etiquetas:')}
-                </span>
-                {selectedMoods.map(m => (
-                  <span
-                    key={m}
-                    className="inline-flex items-center gap-1 text-[8px] font-bold px-2 py-1 rounded-full bg-[#E5E1DB] text-black border border-black/5 tracking-widest uppercase"
-                  >
-                    {getTranslatedMood(m)}
-                  </span>
-                ))}
+          {/* Merged Mood Picker and Daily Reflection in one larger box */}
+          <section className="bg-white border border-black/10 p-5 sm:p-6 shadow-sm rounded-3xl flex flex-col gap-6">
+            {/* Mood selection */}
+            <div>
+              <div className="flex justify-between items-center mb-3.5">
+                <h3 className="font-sans text-xs font-bold text-[#111111] uppercase tracking-widest">
+                  {t('mood_selection')}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowCustomMoodModal(true)}
+                  className="text-black hover:opacity-75 font-sans text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 cursor-pointer transition-colors border-b border-black pb-0.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {t('custom_mood')}
+                </button>
               </div>
 
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {Object.keys(MOOD_DESCRIPTIONS).map(moodName => {
+                  const mood = moodName as MoodType;
+                  const { icon, color } = MOOD_DESCRIPTIONS[mood];
+                  const isSelected = selectedMoods.includes(mood);
+
+                  return (
+                    <button
+                      key={mood}
+                      type="button"
+                      onClick={() => handleMoodSelect(mood)}
+                      className={`flex flex-col items-center p-3 rounded-2xl border transition-all duration-200 group cursor-pointer ${
+                        isSelected
+                          ? 'border-black bg-black text-[#F8F5F2] shadow-none'
+                          : 'border-black/10 bg-white text-[#111111] hover:bg-[#E5E1DB]'
+                      }`}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-colors ${
+                          isSelected ? 'text-[#F8F5F2]' : color
+                        }`}
+                      >
+                        {icon}
+                      </div>
+                      <span
+                        className={`font-sans text-[9px] font-bold uppercase tracking-wider text-center leading-tight ${
+                          isSelected ? 'text-[#F8F5F2]' : 'text-black/60'
+                        }`}
+                      >
+                        {getTranslatedMood(mood)}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                {/* Custom Moods Grid */}
+                {state.customMoods.map(moodName => {
+                  const isSelected = selectedMoods.includes(moodName as any);
+                  return (
+                    <button
+                      key={moodName}
+                      type="button"
+                      onClick={() => handleMoodSelect(moodName as any)}
+                      className={`flex flex-col items-center p-3 rounded-2xl border transition-all duration-200 group cursor-pointer ${
+                        isSelected
+                          ? 'border-black bg-black text-[#F8F5F2]'
+                          : 'border-black/10 bg-white text-[#111111] hover:bg-[#E5E1DB]'
+                      }`}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-colors ${
+                          isSelected ? 'text-[#F8F5F2]' : 'text-[#3e6355]'
+                        }`}
+                      >
+                        <Sparkles className="w-5 h-5" />
+                      </div>
+                      <span
+                        className={`font-sans text-[9px] font-bold uppercase tracking-wider text-center leading-tight truncate w-full ${
+                          isSelected ? 'text-[#F8F5F2]' : 'text-black/60'
+                        }`}
+                      >
+                        {moodName}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Reflection form */}
+            <form onSubmit={handleSaveReflection} className="flex flex-col gap-3.5">
               <input
                 type="text"
                 placeholder={getText('Reflection Title (Optional)', 'Título (Opcional)', 'Título (Opcional)')}
@@ -929,15 +915,15 @@ export const TrackersView: React.FC = () => {
                               {formattedDate}
                             </span>
                             
-                            <div className="flex -space-x-1.5 mt-2.5">
-                              {ref.moods?.slice(0, 2).map(m => {
+                            <div className="flex flex-wrap items-center justify-center gap-1 mt-2.5 max-w-[70px]">
+                              {ref.moods?.map(m => {
                                 const moodStyle = MOOD_DESCRIPTIONS[m];
                                 const iconNode = moodStyle ? moodStyle.icon : <Sparkles className="w-3.5 h-3.5" />;
                                 return (
                                   <div
                                     key={m}
                                     title={getTranslatedMood(m)}
-                                    className="w-7 h-7 rounded-full border border-[#F8F5F2] flex items-center justify-center bg-[#E5E1DB] text-black"
+                                    className="w-6 h-6 rounded-full border border-black/10 flex items-center justify-center bg-[#E5E1DB] text-black shrink-0"
                                   >
                                     {iconNode}
                                   </div>
@@ -953,16 +939,6 @@ export const TrackersView: React.FC = () => {
                                 <h4 className="font-serif text-base font-normal text-[#111111]">
                                   {ref.title}
                                 </h4>
-                                <div className="flex flex-wrap gap-1.5 mt-1">
-                                  {ref.moods?.map(m => (
-                                    <span
-                                      key={m}
-                                      className="px-2 py-0.5 bg-[#E5E1DB]/50 border border-black/5 text-black font-sans text-[8px] font-bold tracking-widest uppercase rounded-full"
-                                    >
-                                      {getTranslatedMood(m)}
-                                    </span>
-                                  ))}
-                                </div>
                               </div>
                               
                               <button
