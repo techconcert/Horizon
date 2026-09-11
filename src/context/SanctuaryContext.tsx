@@ -12,7 +12,8 @@ import {
   restoreFromCloud, 
   exportLocalStateToCloudPayload, 
   writePayloadToLocalStorage, 
-  normalizeSyncCode 
+  normalizeSyncCode,
+  isCloudQuotaExceeded 
 } from '../services/cloudSync';
 import { detectDefaultLanguage } from '../utils/languageDetection';
 
@@ -50,6 +51,7 @@ interface SanctuaryContextType {
   setOnboarded: (onboarded: boolean) => void;
   syncCode: string;
   lastCloudSync: string | null;
+  cloudQuotaExceeded: boolean;
   syncToCloud: () => Promise<boolean>;
   restoreFromSyncCode: (code: string) => Promise<{ success: boolean; error?: string }>;
 }
@@ -182,39 +184,141 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'progress': { English: 'Progress', Español: 'Progreso', Português: 'Progresso' },
 };
 
-export const calculateTimeGrounded = (startDateStr?: string | null) => {
+export const parseSobrietyDateSafely = (startDateStr?: string | null): Date | null => {
+  if (!startDateStr) return null;
+
+  // 1. If standard YYYY-MM-DD from an HTML date input:
+  if (/^\d{4}-\d{2}-\d{2}$/.test(startDateStr)) {
+    const [y, m, d] = startDateStr.split('-').map(Number);
+    return new Date(y, m - 1, d, 0, 0, 0, 0);
+  }
+
+  // 2. If ISO string that was saved with UTC midnight (e.g. from new Date("YYYY-MM-DD").toISOString()):
+  if (/^\d{4}-\d{2}-\d{2}T00:00:00(\.000)?Z?$/.test(startDateStr)) {
+    const [y, m, d] = startDateStr.substring(0, 10).split('-').map(Number);
+    return new Date(y, m - 1, d, 0, 0, 0, 0);
+  }
+
+  // 3. Regular Date parsing (for ISO timestamps with explicit hours/minutes):
+  const parsed = new Date(startDateStr);
+  if (isNaN(parsed.getTime())) return null;
+  return parsed;
+};
+
+export const formatLocalDateToYMD = (date: Date = new Date()): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+export const addYearsClamped = (baseDate: Date, yearsToAdd: number): Date => {
+  const originalDay = baseDate.getDate();
+  const targetYear = baseDate.getFullYear() + yearsToAdd;
+  const targetMonth = baseDate.getMonth();
+  const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const targetDay = Math.min(originalDay, daysInTargetMonth);
+  return new Date(
+    targetYear,
+    targetMonth,
+    targetDay,
+    baseDate.getHours(),
+    baseDate.getMinutes(),
+    baseDate.getSeconds(),
+    baseDate.getMilliseconds()
+  );
+};
+
+export const addMonthsClamped = (baseDate: Date, monthsToAdd: number): Date => {
+  const originalDay = baseDate.getDate();
+  const desiredMonth = baseDate.getMonth() + monthsToAdd;
+  const targetYear = baseDate.getFullYear() + Math.floor(desiredMonth / 12);
+  const targetMonth = ((desiredMonth % 12) + 12) % 12;
+  const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const targetDay = Math.min(originalDay, daysInTargetMonth);
+  return new Date(
+    targetYear,
+    targetMonth,
+    targetDay,
+    baseDate.getHours(),
+    baseDate.getMinutes(),
+    baseDate.getSeconds(),
+    baseDate.getMilliseconds()
+  );
+};
+
+export const calculateTimeGrounded = (startDateStr?: string | null, customNow?: Date) => {
   if (!startDateStr) {
     return { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, totalHours: 0, totalDays: 0 };
   }
-  const start = new Date(startDateStr);
-  if (isNaN(start.getTime())) {
+  const start = parseSobrietyDateSafely(startDateStr);
+  if (!start || isNaN(start.getTime())) {
     return { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, totalHours: 0, totalDays: 0 };
   }
-  const now = new Date();
-  let diffMs = now.getTime() - start.getTime();
-  if (diffMs < 0) diffMs = 0;
 
-  let years = now.getFullYear() - start.getFullYear();
-  let months = now.getMonth() - start.getMonth();
-  let days = now.getDate() - start.getDate();
-
-  if (days < 0) {
-    months--;
-    const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-    days += prevMonth.getDate();
-  }
-  if (months < 0) {
-    years--;
-    months += 12;
+  const now = customNow || new Date();
+  if (now.getTime() < start.getTime()) {
+    return { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, totalHours: 0, totalDays: 0 };
   }
 
-  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+  const totalMs = now.getTime() - start.getTime();
+  const totalDays = Math.floor(totalMs / (1000 * 60 * 60 * 24));
+  const totalHours = Math.floor(totalMs / (1000 * 60 * 60));
 
-  const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  // 1. Calculate whole calendar years elapsed
+  let years = 0;
+  while (addYearsClamped(start, years + 1).getTime() <= now.getTime()) {
+    years++;
+  }
+  const anchorAfterYears = addYearsClamped(start, years);
 
-  return { years, months, days, hours, minutes, seconds, totalHours: Math.floor(diffMs / (1000 * 60 * 60)), totalDays };
+  // 2. Calculate whole calendar months elapsed
+  let months = 0;
+  while (addMonthsClamped(anchorAfterYears, months + 1).getTime() <= now.getTime()) {
+    months++;
+  }
+  const anchorAfterMonths = addMonthsClamped(anchorAfterYears, months);
+
+  // 3. Calculate whole calendar days elapsed
+  const diffAfterMonthsMs = now.getTime() - anchorAfterMonths.getTime();
+  const days = Math.floor(diffAfterMonthsMs / (1000 * 60 * 60 * 24));
+
+  // 4. Calculate remaining hours, minutes, and seconds
+  const remainingMs = diffAfterMonthsMs - (days * 1000 * 60 * 60 * 24);
+  const hours = Math.floor(remainingMs / (1000 * 60 * 60));
+  const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((remainingMs % (1000 * 60)) / 1000);
+
+  return { years, months, days, hours, minutes, seconds, totalHours, totalDays };
+};
+
+export const formatAccumulatedTime = (
+  time: { years: number; months: number; days: number },
+  lang: 'English' | 'Español' | 'Português'
+): string => {
+  const { years, months, days } = time;
+  const parts: string[] = [];
+
+  if (years > 0) {
+    if (lang === 'Español') parts.push(`${years} ${years === 1 ? 'Año' : 'Años'}`);
+    else if (lang === 'Português') parts.push(`${years} ${years === 1 ? 'Ano' : 'Anos'}`);
+    else parts.push(`${years} ${years === 1 ? 'Year' : 'Years'}`);
+  }
+
+  if (months > 0) {
+    if (lang === 'Español') parts.push(`${months} ${months === 1 ? 'Mes' : 'Meses'}`);
+    else if (lang === 'Português') parts.push(`${months} ${months === 1 ? 'Mês' : 'Meses'}`);
+    else parts.push(`${months} ${months === 1 ? 'Month' : 'Months'}`);
+  }
+
+  // Include days if there are remaining days, or if both years and months are 0 (e.g. "12 Days" or "0 Days")
+  if (days > 0 || parts.length === 0) {
+    if (lang === 'Español') parts.push(`${days} ${days === 1 ? 'Día' : 'Días'}`);
+    else if (lang === 'Português') parts.push(`${days} ${days === 1 ? 'Dia' : 'Dias'}`);
+    else parts.push(`${days} ${days === 1 ? 'Day' : 'Days'}`);
+  }
+
+  return parts.join(', ');
 };
 
 export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -321,13 +425,14 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [lastCloudSync, setLastCloudSync] = useState<string | null>(() => {
     return localStorage.getItem('horizon_last_cloud_sync') || null;
   });
+  const [cloudQuotaExceeded, setCloudQuotaExceeded] = useState<boolean>(() => isCloudQuotaExceeded());
 
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [showSOSModal, setShowSOSModal] = useState<boolean>(false);
 
   const [aiUsage, setAiUsage] = useState<{ date: string; count: number }>(() => {
     const saved = localStorage.getItem('aiUsage');
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatLocalDateToYMD();
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -572,7 +677,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Call backend Express AI endpoints
   const generateAIIntention = async (mood: MoodType): Promise<string> => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatLocalDateToYMD();
     
     const fallbackEnglish: Record<MoodType, string> = {
       Calm: 'Just for today, I align myself with the quiet stillness of the present moment.',
@@ -656,7 +761,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const generateAIInsights = async (): Promise<string> => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatLocalDateToYMD();
 
     // Check local limit first
     if (aiUsage.date === today && aiUsage.count >= 3) {
@@ -701,12 +806,22 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  const isLimitReached = aiUsage.date === new Date().toISOString().split('T')[0] && aiUsage.count >= 3;
+  const isLimitReached = aiUsage.date === formatLocalDateToYMD() && aiUsage.count >= 3;
 
   const syncToCloud = async (): Promise<boolean> => {
+    if (!syncEnabled) return false;
+    if (isCloudQuotaExceeded()) {
+      setCloudQuotaExceeded(true);
+      return false;
+    }
     try {
       const payload = exportLocalStateToCloudPayload();
       const res = await saveToCloud(syncCode, payload);
+      if (res.quotaExceeded) {
+        setCloudQuotaExceeded(true);
+      } else {
+        setCloudQuotaExceeded(false);
+      }
       if (res.success) {
         const now = new Date().toISOString();
         setLastCloudSync(now);
@@ -750,15 +865,20 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  // Auto-sync to Cloud Firestore whenever user recovery data changes
+  // Auto-sync to Cloud Firestore whenever user recovery data changes (debounced with quota protection)
   useEffect(() => {
+    if (!syncEnabled) return;
+    if (isCloudQuotaExceeded()) {
+      setCloudQuotaExceeded(true);
+      return;
+    }
     if (onboarded || reflections.length > 0) {
       const timer = setTimeout(() => {
         syncToCloud().catch(() => {});
-      }, 2000);
+      }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [sobrietyStartDate, reflections, steps, customMoods, lastSoberCheckInTime, onboarded]);
+  }, [sobrietyStartDate, reflections, steps, customMoods, lastSoberCheckInTime, onboarded, syncEnabled]);
 
   // Initial cloud restore listener if #sync= was in URL
   useEffect(() => {
@@ -827,6 +947,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setOnboarded,
         syncCode,
         lastCloudSync,
+        cloudQuotaExceeded,
         syncToCloud,
         restoreFromSyncCode,
       }}

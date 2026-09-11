@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useSanctuary } from '../context/SanctuaryContext';
+import { useSanctuary, formatLocalDateToYMD, parseSobrietyDateSafely, formatAccumulatedTime } from '../context/SanctuaryContext';
 import {
   Calendar,
   Lock,
@@ -42,6 +42,7 @@ export const ProfileView: React.FC = () => {
     setSupportLink,
     syncCode,
     lastCloudSync,
+    cloudQuotaExceeded,
     syncToCloud,
     restoreFromSyncCode
   } = useSanctuary();
@@ -49,15 +50,15 @@ export const ProfileView: React.FC = () => {
   const [dateInput, setDateInput] = useState(() => {
     // Format sobrietyStartDate as YYYY-MM-DD for standard html date input
     if (!state.sobrietyStartDate) return '';
-    const d = new Date(state.sobrietyStartDate);
-    return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+    const d = parseSobrietyDateSafely(state.sobrietyStartDate);
+    return d ? formatLocalDateToYMD(d) : '';
   });
 
   useEffect(() => {
     if (state.sobrietyStartDate) {
-      const d = new Date(state.sobrietyStartDate);
-      if (!isNaN(d.getTime())) {
-        setDateInput(d.toISOString().split('T')[0]);
+      const d = parseSobrietyDateSafely(state.sobrietyStartDate);
+      if (d) {
+        setDateInput(formatLocalDateToYMD(d));
       }
     } else {
       setDateInput('');
@@ -71,7 +72,7 @@ export const ProfileView: React.FC = () => {
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
   const [isCloudRestoring, setIsCloudRestoring] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
-  const [cloudMessage, setCloudMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [cloudMessage, setCloudMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   const handleCopySyncCode = () => {
     if (syncCode) {
@@ -92,12 +93,23 @@ export const ProfileView: React.FC = () => {
         text: state.language === 'Português' ? 'Dados sincronizados com sucesso na nuvem!' : state.language === 'Español' ? '¡Datos sincronizados con éxito en la nube!' : 'Data synced successfully to the cloud!'
       });
     } else {
-      setCloudMessage({
-        type: 'error',
-        text: state.language === 'Português' ? 'Falha ao sincronizar com a nuvem' : state.language === 'Español' ? 'Error al sincronizar con la nube' : 'Failed to sync to cloud'
-      });
+      if (cloudQuotaExceeded) {
+        setCloudMessage({
+          type: 'info',
+          text: state.language === 'Português'
+            ? 'Limite diário da nuvem atingido. Seus dados estão seguros e salvos neste dispositivo.'
+            : state.language === 'Español'
+            ? 'Límite diario de la nube alcanzado. Tus datos están seguros y guardados en este dispositivo.'
+            : 'Daily cloud limit reached. Your recovery data is safely saved on this device.'
+        });
+      } else {
+        setCloudMessage({
+          type: 'error',
+          text: state.language === 'Português' ? 'Falha ao sincronizar com a nuvem' : state.language === 'Español' ? 'Error al sincronizar con la nube' : 'Failed to sync to cloud'
+        });
+      }
     }
-    setTimeout(() => setCloudMessage(null), 4000);
+    setTimeout(() => setCloudMessage(null), 5000);
   };
 
   const handleRestoreRemoteCode = async (e: React.FormEvent) => {
@@ -127,13 +139,11 @@ export const ProfileView: React.FC = () => {
     const val = e.target.value;
     setDateInput(val);
     if (val) {
-      // Keep existing hours/minutes offsets if available, otherwise default to current time
-      const oldDate = state.sobrietyStartDate ? new Date(state.sobrietyStartDate) : new Date();
-      const newDate = new Date(val);
-      if (!isNaN(oldDate.getTime())) {
-        newDate.setHours(oldDate.getHours());
-        newDate.setMinutes(oldDate.getMinutes());
-      }
+      const [y, m, d] = val.split('-').map(Number);
+      const oldDate = state.sobrietyStartDate ? parseSobrietyDateSafely(state.sobrietyStartDate) : null;
+      const hours = oldDate ? oldDate.getHours() : 0;
+      const minutes = oldDate ? oldDate.getMinutes() : 0;
+      const newDate = new Date(y, m - 1, d, hours, minutes, 0, 0);
       setSobrietyStartDate(newDate.toISOString());
 
       setIsSavedNotify(true);
@@ -155,8 +165,7 @@ export const ProfileView: React.FC = () => {
                 {getTranslation('cumulative_progress')}
               </span>
               <h2 className="font-serif text-xl md:text-2xl font-normal mt-0.5 leading-snug">
-                {timeGroundedString.years > 0 && `${timeGroundedString.years} ${state.language === 'English' ? 'Years' : state.language === 'Español' ? 'Años' : 'Anos'}, `}
-                {timeGroundedString.months} {state.language === 'English' ? 'Months' : state.language === 'Español' ? 'Meses' : 'Meses'}, {timeGroundedString.days} {state.language === 'English' ? 'Days' : state.language === 'Español' ? 'Días' : 'Dias'}
+                {formatAccumulatedTime(timeGroundedString, state.language)}
               </h2>
               <p className="font-sans text-xs text-white/75 mt-0.5 leading-relaxed italic">
                 {getTranslation('sanctuary_secure')}
@@ -191,7 +200,7 @@ export const ProfileView: React.FC = () => {
               type="date"
               value={dateInput}
               onChange={handleDateChange}
-              max={new Date().toISOString().split('T')[0]}
+              max={formatLocalDateToYMD()}
               className="w-full max-w-full min-w-0 box-border bg-[#F8F5F2] border border-black/15 rounded-2xl p-3 font-sans text-xs focus:outline-none focus:border-black text-[#111111] uppercase font-bold tracking-wider block appearance-none"
             />
             {isSavedNotify && (
@@ -370,9 +379,26 @@ export const ProfileView: React.FC = () => {
           </div>
         </div>
 
+        {cloudQuotaExceeded && (
+          <div className="mt-3 p-3 rounded-2xl text-xs font-sans font-medium flex items-center gap-2 bg-amber-50 text-amber-900 border border-amber-200">
+            <Shield className="w-4 h-4 shrink-0 text-amber-700" />
+            <span>
+              {state.language === 'English'
+                ? 'Daily cloud backup limit reached. Local offline storage is active and protecting your data.'
+                : state.language === 'Español'
+                ? 'Límite diario de nube alcanzado. El almacenamiento local está activo y protegiendo tus datos.'
+                : 'Limite diário de nuvem atingido. O armazenamento local está ativo e protegendo seus dados.'}
+            </span>
+          </div>
+        )}
+
         {cloudMessage && (
           <div className={`mt-3 p-3 rounded-2xl text-xs font-sans font-medium flex items-center gap-2 animate-fadeIn ${
-            cloudMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+            cloudMessage.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+              : cloudMessage.type === 'info'
+              ? 'bg-amber-50 text-amber-900 border border-amber-200'
+              : 'bg-red-50 text-red-800 border border-red-200'
           }`}>
             {cloudMessage.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <Shield className="w-4 h-4 shrink-0" />}
             <span>{cloudMessage.text}</span>
@@ -447,7 +473,7 @@ export const ProfileView: React.FC = () => {
 
       {/* App License & Version Footer */}
       <footer className="text-center py-4 text-xs font-sans text-black/40 space-y-0.5">
-        <p className="font-medium text-black/50">Horizon v2.1.6</p>
+        <p className="font-medium text-black/50">Horizon v2.1.9</p>
         <p>
           {state.language === 'Español' ? 'Software libre bajo licencia GNU GPLv3' : state.language === 'Português' ? 'Software livre sob licença GNU GPLv3' : 'Free & Open Source Software under GNU GPLv3'}
         </p>

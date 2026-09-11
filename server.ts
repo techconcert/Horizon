@@ -64,6 +64,10 @@ function getAI() {
 
 // API Routes FIRST
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 /**
  * Endpoint to generate a customized serene daily intention based on user mood
  */
@@ -175,8 +179,13 @@ Do NOT output any surrounding text. Just the 2-3 sentence paragraph.`;
 // Setup Vite or static files serving based on environment
 async function setupServer() {
   if (process.env.NODE_ENV !== 'production') {
+    const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { 
+        middlewareMode: true,
+        hmr: isHmrDisabled ? false : undefined,
+        watch: isHmrDisabled ? null : undefined,
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

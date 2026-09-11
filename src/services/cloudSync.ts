@@ -3,10 +3,31 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore/lite';
 import { db } from '../lib/firebase';
 
 const CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // 32 chars without 0/O, 1/I ambiguity
+const QUOTA_KEY = 'horizon_cloud_quota_exceeded_until';
+const LAST_PAYLOAD_HASH_KEY = 'horizon_last_saved_payload_hash';
+
+export function isCloudQuotaExceeded(): boolean {
+  if (typeof window === 'undefined') return false;
+  const until = localStorage.getItem(QUOTA_KEY);
+  if (!until) return false;
+  const untilTime = parseInt(until, 10);
+  if (isNaN(untilTime)) return false;
+  if (Date.now() < untilTime) {
+    return true;
+  }
+  localStorage.removeItem(QUOTA_KEY);
+  return false;
+}
+
+export function setCloudQuotaExceededCooldown(durationMs: number = 60 * 60 * 1000): void {
+  if (typeof window === 'undefined') return;
+  const until = Date.now() + durationMs;
+  localStorage.setItem(QUOTA_KEY, until.toString());
+}
 
 export function normalizeSyncCode(input: string): string {
   if (!input) return '';
@@ -59,14 +80,39 @@ export interface CloudPayload {
   onboarded?: boolean;
 }
 
+export interface SaveToCloudResult {
+  success: boolean;
+  error?: string;
+  quotaExceeded?: boolean;
+  unchanged?: boolean;
+}
+
 export async function saveToCloud(
   syncCode: string,
   data: CloudPayload
-): Promise<{ success: boolean; error?: string }> {
+): Promise<SaveToCloudResult> {
   try {
     const normalized = normalizeSyncCode(syncCode);
     if (!normalized || normalized.length < 5) {
       return { success: false, error: 'Invalid sync code' };
+    }
+
+    // 1. Quota Circuit Breaker: Do not hammer Firestore if quota is reached
+    if (isCloudQuotaExceeded()) {
+      return {
+        success: false,
+        error: 'Cloud backup quota reached for today. Your recovery data is safely saved on this device.',
+        quotaExceeded: true,
+      };
+    }
+
+    // 2. Deduplication: Skip write if recovery state is identical to last successful sync
+    const currentPayloadStr = JSON.stringify(data);
+    if (typeof window !== 'undefined') {
+      const lastPayloadStr = localStorage.getItem(LAST_PAYLOAD_HASH_KEY);
+      if (lastPayloadStr === currentPayloadStr) {
+        return { success: true, unchanged: true };
+      }
     }
 
     const docRef = doc(db, 'sync_backups', normalized);
@@ -77,15 +123,34 @@ export async function saveToCloud(
       version: 1
     };
 
-    await setDoc(docRef, cleanData, { merge: true });
+    await setDoc(docRef, cleanData);
     if (typeof window !== 'undefined') {
       localStorage.setItem('horizon_last_cloud_sync', new Date().toISOString());
       localStorage.setItem('horizon_sync_code', normalized);
+      localStorage.setItem(LAST_PAYLOAD_HASH_KEY, currentPayloadStr);
     }
     return { success: true };
   } catch (err: any) {
-    console.error('[CloudSync] saveToCloud error:', err);
-    return { success: false, error: err?.message || 'Failed to save to cloud' };
+    const errMsg = err?.message || String(err);
+    const errCode = err?.code || '';
+    const isQuota =
+      errCode === 'resource-exhausted' ||
+      errMsg.includes('resource-exhausted') ||
+      errMsg.includes('Quota limit exceeded') ||
+      errMsg.includes('Quota exceeded');
+
+    if (isQuota) {
+      setCloudQuotaExceededCooldown(60 * 60 * 1000); // 1-hour cooldown
+      console.warn('[CloudSync] Firestore daily write quota limit reached. Switched to local offline storage.');
+      return {
+        success: false,
+        error: 'Cloud backup quota reached for today. Your recovery data is safely saved on this device.',
+        quotaExceeded: true,
+      };
+    }
+
+    console.warn('[CloudSync] saveToCloud error:', errMsg);
+    return { success: false, error: errMsg || 'Failed to save to cloud' };
   }
 }
 
@@ -112,8 +177,9 @@ export async function restoreFromCloud(
 
     return { success: true, data: docData.data as CloudPayload };
   } catch (err: any) {
-    console.error('[CloudSync] restoreFromCloud error:', err);
-    return { success: false, error: err?.message || 'Failed to retrieve data from cloud' };
+    const errMsg = err?.message || String(err);
+    console.warn('[CloudSync] restoreFromCloud error:', errMsg);
+    return { success: false, error: errMsg || 'Failed to retrieve data from cloud' };
   }
 }
 

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useSanctuary } from '../context/SanctuaryContext';
+import { useSanctuary, formatLocalDateToYMD, parseSobrietyDateSafely } from '../context/SanctuaryContext';
 import { detectDefaultLanguage } from '../utils/languageDetection';
 import { 
   Globe, 
@@ -145,8 +145,8 @@ export const OnboardingView: React.FC = () => {
   }, [state.language, setLanguage]);
   
   const [localDate, setLocalDate] = useState(() => {
-    // Default to today
-    return new Date().toISOString().split('T')[0];
+    // Default to today in local calendar date
+    return formatLocalDateToYMD();
   });
 
   const [localSupportNum, setLocalSupportNum] = useState('');
@@ -186,9 +186,10 @@ export const OnboardingView: React.FC = () => {
     if (stepIndex < 2) {
       setStepIndex(prev => prev + 1);
     } else {
-      // Save all and complete onboarding
-      const isoDateTime = new Date(localDate).toISOString();
-      setSobrietyStartDate(isoDateTime);
+      // Save all and complete onboarding with local start of day
+      const [y, m, d] = localDate.split('-').map(Number);
+      const localStartDate = new Date(y, m - 1, d, 0, 0, 0, 0);
+      setSobrietyStartDate(localStartDate.toISOString());
       setSupportNumber(localSupportNum);
       setSponsorName(localSponsorName);
       setSponsorNumber(localSponsorNum);
@@ -295,7 +296,7 @@ export const OnboardingView: React.FC = () => {
                   <input
                     type="date"
                     value={localDate}
-                    max={new Date().toISOString().split('T')[0]}
+                    max={formatLocalDateToYMD()}
                     onChange={(e) => setLocalDate(e.target.value)}
                     className="w-full min-w-0 bg-[#F8F5F2] border border-black/15 rounded-xl py-2.5 px-3 font-sans text-xs focus:outline-none focus:border-black text-[#111111] uppercase font-bold tracking-wider block appearance-none"
                   />
@@ -308,7 +309,7 @@ export const OnboardingView: React.FC = () => {
                       {ONBOARD_TRANS.milestone_preview[currentLang]}
                     </span>
                     <span className="font-serif text-xs sm:text-sm text-black">
-                      {new Date(localDate).toLocaleDateString(
+                      {(parseSobrietyDateSafely(localDate) || new Date()).toLocaleDateString(
                         localLang === 'English' ? 'en-US' : localLang === 'Español' ? 'es-ES' : 'pt-BR',
                         { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
                       )}

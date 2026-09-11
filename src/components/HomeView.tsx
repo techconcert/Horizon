@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useSanctuary } from '../context/SanctuaryContext';
+import { useSanctuary, formatAccumulatedTime } from '../context/SanctuaryContext';
 import { getDailyFocusMessage } from '../data/dailyFocusMessages';
 import {
   Sparkles,
@@ -348,39 +348,7 @@ export const HomeView: React.FC = () => {
   const secondsTodayStr = secondsToday.toString().padStart(2, '0');
 
   const getAccumulatedTimeString = () => {
-    const { years, months, days } = timeGroundedString;
-    const lang = state.language;
-
-    let yStr = '';
-    if (years > 0) {
-      if (lang === 'Español') {
-        yStr = `${years} ${years === 1 ? 'Año' : 'Años'}, `;
-      } else if (lang === 'Português') {
-        yStr = `${years} ${years === 1 ? 'Ano' : 'Anos'}, `;
-      } else {
-        yStr = `${years} ${years === 1 ? 'Year' : 'Years'}, `;
-      }
-    }
-
-    let mStr = '';
-    if (lang === 'Español') {
-      mStr = `${months} ${months === 1 ? 'Mes' : 'Meses'}, `;
-    } else if (lang === 'Português') {
-      mStr = `${months} ${months === 1 ? 'Mês' : 'Meses'}, `;
-    } else {
-      mStr = `${months} ${months === 1 ? 'Month' : 'Months'}, `;
-    }
-
-    let dStr = '';
-    if (lang === 'Español') {
-      dStr = `${days} ${days === 1 ? 'Día' : 'Días'}`;
-    } else if (lang === 'Português') {
-      dStr = `${days} ${days === 1 ? 'Dia' : 'Dias'}`;
-    } else {
-      dStr = `${days} ${days === 1 ? 'Day' : 'Days'}`;
-    }
-
-    return `${yStr}${mStr}${dStr}`;
+    return formatAccumulatedTime(timeGroundedString, state.language);
   };
 
   const getRemainingCommitmentTime = () => {

@@ -4,7 +4,7 @@
  */
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore } from 'firebase/firestore/lite';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase App singleton
