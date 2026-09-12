@@ -26,8 +26,10 @@ import {
   CloudUpload,
   Loader2
 } from 'lucide-react';
+import { forceClearCacheAndReload } from '../utils/versionCheck';
 
 export const ProfileView: React.FC = () => {
+  const [isClearingCache, setIsClearingCache] = useState(false);
   const {
     state,
     setSobrietyStartDate,
@@ -472,8 +474,33 @@ export const ProfileView: React.FC = () => {
       </section>
 
       {/* App License & Version Footer */}
-      <footer className="text-center py-4 text-xs font-sans text-black/40 space-y-0.5">
-        <p className="font-medium text-black/50">Horizon v2.1.27</p>
+      <footer className="text-center py-4 text-xs font-sans text-black/40 space-y-2">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+          <p className="font-medium text-black/50">Horizon v2.1.36</p>
+          <span className="hidden sm:inline text-black/20">•</span>
+          <button
+            type="button"
+            onClick={async () => {
+              setIsClearingCache(true);
+              await forceClearCacheAndReload();
+            }}
+            disabled={isClearingCache}
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-black/60 hover:text-black transition-colors underline cursor-pointer disabled:opacity-50"
+          >
+            {isClearingCache ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <RefreshCw className="w-3 h-3" />
+            )}
+            <span>
+              {state.language === 'Español'
+                ? 'Forzar actualización y vaciar caché'
+                : state.language === 'Português'
+                ? 'Forçar atualização e limpar cache'
+                : 'Force update & clear cache'}
+            </span>
+          </button>
+        </div>
         <p>
           {state.language === 'Español' ? 'Software libre bajo licencia GNU GPLv3' : state.language === 'Português' ? 'Software livre sob licença GNU GPLv3' : 'Free & Open Source Software under GNU GPLv3'}
         </p>

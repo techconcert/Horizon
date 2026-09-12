@@ -7,6 +7,10 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { APP_VERSION, checkAndEnforceAppVersion } from './utils/versionCheck.ts';
+
+// Enforce version-based cache clear immediately on bootstrap
+checkAndEnforceAppVersion();
 
 // Cross-domain data migration & cloud sync listener:
 // If opened with #sync=HZ-XXXX and/or #migrate=<payload>, restore records seamlessly
@@ -59,19 +63,36 @@ try {
   console.error('[Horizon] Migration import error:', err);
 }
 
-// Register PWA Service Worker with active update polling
+// PWA Service Worker management:
+// In development mode, unregister any service workers to ensure live HMR/edits are always visible.
+// In production, register with version query parameter so every version bump is treated as an update.
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((reg) => {
-        console.log('Horizon Service Worker registered successfully:', reg.scope);
-        // Prompt immediate check for updated worker
-        reg.update().catch(() => {});
-      })
-      .catch((err) => {
-        console.error('Horizon Service Worker registration failed:', err);
-      });
-  });
+  if (import.meta.env.DEV) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      for (const reg of regs) {
+        reg.unregister();
+      }
+    });
+  } else {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register(`/sw.js?v=${APP_VERSION}`)
+        .then((reg) => {
+          console.log('Horizon Service Worker registered successfully:', reg.scope);
+          reg.update().catch(() => {});
+        })
+        .catch((err) => {
+          console.error('Horizon Service Worker registration failed:', err);
+        });
+    });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+  }
 }
 
 createRoot(document.getElementById('root')!).render(

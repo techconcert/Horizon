@@ -7,6 +7,30 @@
     <meta name="description" content="A recovery app offering daily reflections, interactive sober counters, sentiment charts, breathing pacers, and 12-Step lessons." />
     <meta property="og:title" content="Horizon" />
     <meta property="og:description" content="A recovery app offering daily reflections, interactive sober counters, sentiment charts, breathing pacers, and 12-Step lessons." />
+    <!-- Instant PWA Version Check & Cache Purge: on version bump, force clears all service-worker & browser caches -->
+    <script>
+      (function() {
+        var APP_VERSION = '2.1.36';
+        var storedVersion = localStorage.getItem('horizon_app_version');
+        if (!storedVersion || storedVersion !== APP_VERSION) {
+          console.log('[Horizon] Version update detected (' + storedVersion + ' -> ' + APP_VERSION + '). Purging stale caches...');
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              return Promise.all(names.map(function(n) { return caches.delete(n); }));
+            }).catch(function() {});
+          }
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              return Promise.all(regs.map(function(r) { return r.unregister(); }));
+            }).catch(function() {});
+          }
+          localStorage.setItem('horizon_app_version', APP_VERSION);
+          if (storedVersion && storedVersion !== APP_VERSION) {
+            window.location.reload();
+          }
+        }
+      })();
+    </script>
     <!-- Instant PWA Self-Healing: clears stale service-worker caches if missing chunks cause a blank screen -->
     <script>
       (function() {

@@ -187,6 +187,16 @@ async function setupServer() {
   });
 
   if (process.env.NODE_ENV !== 'production') {
+    // In development mode, force no-cache on all document and code requests to ensure live updates
+    app.use((req, res, next) => {
+      if (req.path === '/' || req.path === '/index.html' || req.path === '/sw.js' || req.path.endsWith('.ts') || req.path.endsWith('.tsx') || req.path.endsWith('.js')) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+      next();
+    });
+
     const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
       server: { 
@@ -203,15 +213,19 @@ async function setupServer() {
     // Never cache service worker or index.html to ensure PWA clients always receive current updates
     app.use((req, res, next) => {
       if (req.path === '/sw.js' || req.path === '/' || req.path === '/index.html') {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
       }
       next();
     });
 
     app.use(express.static(distPath, {
       setHeaders: (res, filePath) => {
-        if (filePath.endsWith('sw.js')) {
-          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        if (filePath.endsWith('sw.js') || filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
         }
       }
     }));
@@ -222,7 +236,9 @@ async function setupServer() {
     });
 
     app.get('*', (req, res) => {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

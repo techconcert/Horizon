@@ -324,12 +324,12 @@ const getText = (en: string, es: string, pt: string) => {
 
   // VIEW 1: All Steps Overview
   return (
-    <div className="flex flex-col gap-6 animate-fadeIn">
-      <section className="text-center max-w-2xl mx-auto mb-2">
-        <h2 className="font-serif text-3xl md:text-4xl text-black mb-3 font-normal tracking-tight">
+    <div className="flex flex-col gap-2 animate-fadeIn">
+      <section className="text-center max-w-2xl mx-auto flex flex-col items-center pt-0 pb-1 w-full">
+        <h2 className="font-serif text-2xl sm:text-3xl text-black mb-1 font-normal tracking-tight">
           {getTranslation('academy_title')}
         </h2>
-        <p className="font-sans text-sm text-black/60 italic leading-relaxed">
+        <p className="font-sans text-xs text-black/60 italic leading-snug max-w-lg mb-0">
           {getTranslation('academy_sub')}
         </p>
       </section>

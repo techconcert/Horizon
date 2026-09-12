@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-export type TabType = 'home' | 'trackers' | 'tools' | 'lessons' | 'profile';
+export type TabType = 'home' | 'trackers' | 'meditation' | 'breathing' | 'lessons' | 'profile' | 'tools';
 
 export type MoodType = 
   | 'Calm' 

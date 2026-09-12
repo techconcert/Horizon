@@ -9,6 +9,8 @@ import { SanctuaryProvider, useSanctuary } from './context/SanctuaryContext';
 import { NavBar } from './components/NavBar';
 import { HomeView } from './components/HomeView';
 import { TrackersView } from './components/TrackersView';
+import { MeditationView } from './components/MeditationView';
+import { BreathingView } from './components/BreathingView';
 import { ToolsView } from './components/ToolsView';
 import { LessonsView } from './components/LessonsView';
 import { ProfileView } from './components/ProfileView';
@@ -204,6 +206,18 @@ const SanctuaryContent: React.FC = () => {
         />
       </div>
 
+      {/* Persistent Top-Right Action: Reach Out ONLY (the only sticky button) */}
+      <div className="fixed top-3 right-4 md:right-8 z-50">
+        <button
+          onClick={() => setShowSOSModal(true)}
+          className="w-8 h-8 rounded-full flex items-center justify-center select-none bg-red-800 hover:bg-red-700 active:bg-red-900 text-white border border-red-900/30 shadow-xs transition-all cursor-pointer touch-manipulation active:scale-95"
+          title={reachOutTitle}
+          aria-label={reachOutTitle}
+        >
+          <HeartHandshake className="w-4.5 h-4.5 text-white stroke-[2.2]" />
+        </button>
+      </div>
+
       {/* Top Header Navigation Bar (non-sticky, scrolls with page) */}
       <header className="relative w-full z-40 px-4 md:px-8 py-3 flex items-center justify-between bg-transparent">
         <div className="flex flex-col">
@@ -215,14 +229,26 @@ const SanctuaryContent: React.FC = () => {
           </span>
         </div>
 
-        {/* Right Action: Cloud Sync status & Profile button */}
-        <div className="flex items-center gap-3">
+        {/* Centered Step Indicator (Plain text only, centered in top bar) */}
+        {(state.activeTab === 'trackers' || state.activeTab === 'meditation') && (
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
+            <span className="font-sans text-[11px] sm:text-xs font-extrabold tracking-widest uppercase text-[#143224]/80 select-none">
+              {state.activeTab === 'trackers' && (isEn ? 'STEP 10' : isEs ? 'PASO 10' : 'PASSO 10')}
+              {state.activeTab === 'meditation' && (isEn ? 'STEP 11' : isEs ? 'PASO 11' : 'PASSO 11')}
+            </span>
+          </div>
+        )}
+
+        {/* Right Actions: Cloud Sync & Settings/Profile (non-sticky, scrolls with header, leaving room for fixed Reach Out button) */}
+        <div className="flex items-center gap-2 pr-11">
           {state.syncEnabled && (
             <div className="hidden sm:flex items-center gap-1.5 text-[#143224] bg-[#E5E1DB]/90 backdrop-blur-xs border border-[#143224]/10 rounded-full px-3 py-1 text-[9px] font-bold tracking-widest uppercase shadow-2xs">
               <RefreshCw className="w-2.5 h-2.5 animate-spin-slow" />
               <span>{isEn ? 'Synced' : isEs ? 'Sincronizado' : 'Sincronizado'}</span>
             </div>
           )}
+
+          {/* Settings / Profile button (non-sticky) */}
           <button
             onClick={() => setActiveTab('profile')}
             className={`w-8 h-8 rounded-full flex items-center justify-center select-none border transition-all cursor-pointer shadow-xs ${
@@ -230,7 +256,8 @@ const SanctuaryContent: React.FC = () => {
                 ? 'bg-[#3e6355] border-[#3e6355] text-[#F8F5F2] scale-105 ring-2 ring-[#3e6355]/30'
                 : 'bg-[#183628] border-[#183628] text-[#F8F5F2] hover:bg-[#254d3b]'
             }`}
-            title={isEn ? 'Profile' : isEs ? 'Perfil' : 'Perfil'}
+            title={isEn ? 'Settings' : isEs ? 'Ajustes' : 'Configurações'}
+            aria-label={isEn ? 'Settings' : isEs ? 'Ajustes' : 'Configurações'}
           >
             <User className="w-4.5 h-4.5" />
           </button>
@@ -238,10 +265,11 @@ const SanctuaryContent: React.FC = () => {
       </header>
 
       {/* Main Viewport panel */}
-      <main className="flex-grow w-full max-w-7xl mx-auto px-4 md:px-8 pt-3 pb-24 md:pt-4 md:pb-24 relative z-10 animate-fadeIn">
+      <main className="flex-grow w-full max-w-7xl mx-auto px-4 md:px-8 pt-1 pb-24 md:pt-2 md:pb-24 relative z-10 animate-fadeIn">
         {state.activeTab === 'home' && <HomeView />}
         {state.activeTab === 'trackers' && <TrackersView />}
-        {state.activeTab === 'tools' && <ToolsView />}
+        {(state.activeTab === 'meditation' || state.activeTab === 'tools') && <MeditationView />}
+        {state.activeTab === 'breathing' && <BreathingView />}
         {state.activeTab === 'lessons' && <LessonsView />}
         {state.activeTab === 'profile' && <ProfileView />}
       </main>

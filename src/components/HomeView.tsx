@@ -755,7 +755,7 @@ export const HomeView: React.FC = () => {
       <section className="flex items-center justify-center gap-8 z-20 w-full pt-1">
         {/* Start Ritual button */}
         <button
-          onClick={() => setActiveTab('tools')}
+          onClick={() => setActiveTab('meditation')}
           className="font-sans text-[10px] font-bold text-[#53766a] hover:text-[#3e6355] transition-colors focus:outline-none flex flex-col items-center gap-2 group cursor-pointer"
         >
           <div className="w-12 h-12 rounded-full border border-[#53766a]/20 flex items-center justify-center group-hover:border-[#53766a] transition-all duration-300 shadow-[0_2px_8px_rgba(45,49,50,0.02)] bg-white">

@@ -85,8 +85,10 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'recent_reviews': { English: 'Recent Entries', Español: 'Registros recientes', Português: 'Registros recentes' },
   'view_all': { English: 'View All', Español: 'Ver todo', Português: 'Ver tudo' },
   'home_tab': { English: 'Home', Español: 'Inicio', Português: 'Início' },
-  'trackers_tab': { English: 'Trackers', Español: 'Progreso', Português: 'Progresso' },
+  'trackers_tab': { English: 'Track', Español: 'Registro', Português: 'Registro' },
   'tools_tab': { English: 'Tools', Español: 'Herramientas', Português: 'Ferramentas' },
+  'meditation_tab': { English: 'Meditation', Español: 'Meditación', Português: 'Meditação' },
+  'breathing_tab': { English: 'Breathing', Español: 'Respiración', Português: 'Respiração' },
   'lessons_tab': { English: 'Lessons', Español: 'Lecciones', Português: 'Lições' },
   'profile_tab': { English: 'Profile', Español: 'Perfil', Português: 'Perfil' },
   'you_are_here': { English: 'You are here.', Español: 'Estás aquí.', Português: 'Você está aqui.' },
@@ -121,14 +123,18 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'silent_meditation': { English: 'Silent Meditation', Español: 'Meditación silenciosa', Português: 'Meditação silenciosa' },
   'begin_silence': { English: 'Begin Silence', Español: 'Comenzar silencio', Português: 'Começar silêncio' },
   'guided_prompts': { English: 'Guided Prompts', Español: 'Guías de reflexión', Português: 'Guias de reflexão' },
-  'morning_gratitude': { English: 'Morning Gratitude', Español: 'Gratitud de la mañana', Português: 'Gratidão matinal' },
-  'morning_grat_desc': { English: 'Align your intentions for the day with a gentle focus on what you have.', Español: 'Alinea tus intenciones del día enfocándote suavemente en lo que tienes.', Português: 'Alinhe suas intenções do dia com um foco suave naquilo que você tem.' },
+  'morning_gratitude': { English: 'Gratitude', Español: 'Gratitud', Português: 'Gratidão' },
+  'gratitude': { English: 'Gratitude', Español: 'Gratitud', Português: 'Gratidão' },
+  'morning_grat_desc': { English: 'Center your thoughts and intentions with a gentle focus on what you have.', Español: 'Centra tus pensamientos e intenciones enfocándote suavemente en lo que tienes.', Português: 'Centre seus pensamentos e intenções com um foco suave naquilo que você tem.' },
+  'gratitude_desc': { English: 'Center your thoughts and intentions with a gentle focus on what you have.', Español: 'Centra tus pensamientos e intenciones enfocándote suavemente en lo que tienes.', Português: 'Centre seus pensamentos e intenções com um foco suave naquilo que você tem.' },
   'serenity_prayer': { English: 'Serenity Prayer', Español: 'Oración de la Serenidad', Português: 'Oração da Serenidade' },
   'your_intention': { English: 'Serenity Prayer', Español: 'Oración de la Serenidad', Português: 'Oração da Serenidade' },
   'close': { English: 'Close', Español: 'Cerrar', Português: 'Fechar' },
   'serenity_desc': { English: 'A classic meditation on acceptance, courage, and wisdom.', Español: 'Una meditación clásica sobre la aceptación, el valor y la sabiduría.', Português: 'Uma meditação clássica sobre aceitação, coragem e sabedoria.' },
-  'evening_release': { English: 'Evening Release', Español: 'Descarga nocturna', Português: 'Descarrego noturno' },
-  'evening_desc': { English: "Let go of the day's burdens before finding rest.", Español: 'Suelta las cargas del día antes de descansar.', Português: 'Solte as cargas do dia antes de descansar.' },
+  'evening_release': { English: 'Release', Español: 'Liberación', Português: 'Libertação' },
+  'release': { English: 'Release', Español: 'Liberación', Português: 'Libertação' },
+  'evening_desc': { English: 'Let go of tension, heavy burdens, and expectations.', Español: 'Suelta la tensión, las cargas pesadas y las expectativas.', Português: 'Solte a tensão, os pesos e as expectativas.' },
+  'release_desc': { English: 'Let go of tension, heavy burdens, and expectations.', Español: 'Suelta la tensión, las cargas pesadas y las expectativas.', Português: 'Solte a tensão, os pesos e as expectativas.' },
   'breathing_exercises': { English: 'Breathing Exercises', Español: 'Ejercicios de respiración', Português: 'Exercícios de respiração' },
   'find_center': { English: 'Find your center with guided rhythms.', Español: 'Encuentra tu centro con ritmos guiados.', Português: 'Encontre o seu centro com ritmos guiados.' },
   'inhale': { English: 'Inhale', Español: 'Inhala', Português: 'Inspira' },
@@ -136,6 +142,8 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'exhale': { English: 'Exhale', Español: 'Exhala', Português: 'Expira' },
   'seconds': { English: 'seconds', Español: 'segundos', Português: 'segundos' },
   'start_session': { English: 'Start Session', Español: 'Empezar sesión', Português: 'Iniciar sessão' },
+  'pause_session': { English: 'Pause Session', Español: 'Pausar sesión', Português: 'Pausar sessão' },
+  'pause_section': { English: 'Pause Session', Español: 'Pausar sesión', Português: 'Pausar sessão' },
   'stop_session': { English: 'Stop Session', Español: 'Detener sesión', Português: 'Parar sessão' },
   'techniques': { English: 'Techniques', Español: 'Técnicas', Português: 'Técnicas' },
   'current_badge': { English: 'Current', Español: 'Actual', Português: 'Atual' },
@@ -414,7 +422,9 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const [activeTab, setActiveTabState] = useState<TabType>(() => {
-    return (localStorage.getItem('activeTab') as TabType) || 'home';
+    const saved = localStorage.getItem('activeTab');
+    if (saved === 'tools') return 'meditation';
+    return (saved as TabType) || 'home';
   });
 
   const [currentLessonId, setCurrentLessonIdState] = useState<string | null>(() => {

@@ -667,15 +667,21 @@ export const TrackersView: React.FC = () => {
   });
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-2">
       
-      {/* Top Ethereal Context Chip */}
-      <div className="flex justify-center mt-1 animate-fadeIn">
-        <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#E5E1DB] border border-black/10 text-black font-sans text-[10px] font-bold tracking-widest uppercase shadow-none">
-          <BrainCircuit className="w-3.5 h-3.5 mr-2 text-black animate-pulse" />
-          {getTranslation('step_chip')}
-        </div>
-      </div>
+      {/* Daily Reflections Header */}
+      <section className="text-center max-w-2xl mx-auto flex flex-col items-center pt-0 pb-1 w-full">
+        <h2 className="font-serif text-2xl sm:text-3xl text-black mb-1 font-normal tracking-tight">
+          {getText('Daily Reflections', 'Reflexiones diarias', 'Reflexões diárias')}
+        </h2>
+        <p className="font-sans text-xs text-black/60 italic leading-snug max-w-lg mb-0">
+          {getText(
+            'Daily inventory and mindful check-in to support your recovery journey.',
+            'Inventario diario y registro consciente para apoyar tu recuperación.',
+            'Inventário diário e registro consciente para apoiar sua recuperação.'
+          )}
+        </p>
+      </section>
 
       {/* Segmented Control Tab Bar */}
       <div className="flex bg-[#E5E1DB] rounded-full p-1 mx-auto w-full max-w-md shadow-sm border border-black/10 animate-fadeIn">
@@ -719,20 +725,6 @@ export const TrackersView: React.FC = () => {
           <section className="bg-white border border-black/10 p-4 sm:p-5 shadow-sm rounded-3xl flex flex-col gap-4 sm:gap-5">
             {/* Mood selection */}
             <div>
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-sans text-xs font-bold text-[#111111] uppercase tracking-widest">
-                  {t('mood_selection')}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setShowCustomMoodModal(true)}
-                  className="text-black hover:opacity-75 font-sans text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 cursor-pointer transition-colors border-b border-black pb-0.5"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  {t('custom_mood')}
-                </button>
-              </div>
-
               <div className="grid grid-cols-3 gap-y-2.5 sm:gap-y-3.5 gap-x-1.5 sm:gap-x-3">
                 {ORDERED_MOODS.map(mood => {
                   const { icon, color, bg, activeRing } = MOOD_DESCRIPTIONS[mood];
@@ -799,13 +791,25 @@ export const TrackersView: React.FC = () => {
                   );
                 })}
               </div>
+
+              {/* +Custom moved to bottom right of mood icons */}
+              <div className="flex justify-end mt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomMoodModal(true)}
+                  className="text-black hover:opacity-75 font-sans text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 cursor-pointer transition-colors border-b border-black pb-0.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {t('custom_mood')}
+                </button>
+              </div>
             </div>
 
-            {/* Reflection form */}
+            {/* Checkin form */}
             <form onSubmit={handleSaveReflection} className="flex flex-col gap-3.5 border-t border-black/5 pt-4">
               <input
                 type="text"
-                placeholder={getText('Reflection Title (Optional)', 'Título (Opcional)', 'Título (Opcional)')}
+                placeholder={getText('Title (Optional)', 'Título (Opcional)', 'Título (Opcional)')}
                 value={reflectionTitle}
                 onChange={e => setReflectionTitle(e.target.value)}
                 className="w-full bg-[#F8F5F2] border border-black/10 rounded-2xl p-3 font-sans text-xs focus:outline-none focus:border-black text-[#111111]"
