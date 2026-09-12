@@ -63,13 +63,35 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Ensure native date picker calendar icon is visible and touch friendly */
+/* Ensure date inputs never overflow container on iOS / mobile Safari */
+input[type="date"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* In iOS Safari, ensure the date-and-time value container does not force overflow */
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.2em;
+  margin: 0;
+  padding: 0;
+}
+
+/* Hide duplicate native indicator while allowing it to act as an invisible click target on the right icon */
 input[type="date"]::-webkit-calendar-picker-indicator {
-  opacity: 0.7;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 2.75rem;
+  height: 100%;
+  opacity: 0;
   cursor: pointer;
-  display: block;
-  padding: 4px;
+  z-index: 5;
 }
-input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-}
+

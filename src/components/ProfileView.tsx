@@ -37,6 +37,87 @@ const FELLOWSHIP_OPTIONS: Record<'English' | 'Español' | 'Português', string[]
   Português: ['AA', 'NA', 'CA', 'CMA', 'MA', 'CCA', 'JA', 'DASA', 'SA', 'DA', 'Outro'],
 };
 
+interface FellowshipTranslation {
+  English: string;
+  Español: string;
+  Português: string;
+}
+
+const FELLOWSHIP_TRANSLATIONS: FellowshipTranslation[] = [
+  { English: 'AA', Español: 'AA', Português: 'AA' },
+  { English: 'NA', Español: 'NA', Português: 'NA' },
+  { English: 'CA', Español: 'CA', Português: 'CA' },
+  { English: 'CMA', Español: 'CMA', Português: 'CMA' },
+  { English: 'MA', Español: 'MA', Português: 'MA' },
+  { English: 'OA', Español: 'OA', Português: 'CCA' },
+  { English: 'GA', Español: 'GA', Português: 'JA' },
+  { English: 'SLAA', Español: 'SLAA', Português: 'DASA' },
+  { English: 'SA', Español: 'SA', Português: 'SA' },
+  { English: 'DA', Español: 'DA', Português: 'DA' },
+  { English: 'Al-Anon', Español: 'Al-Anon', Português: 'Al-Anon' },
+  { English: 'Alateen', Español: 'Alateen', Português: 'Alateen' },
+  { English: 'CoDA', Español: 'CoDA', Português: 'CoDA' },
+  { English: 'ACA', Español: 'ACA', Português: 'ACA' },
+  { English: 'Other', Español: 'Otro', Português: 'Outro' },
+];
+
+/**
+ * Translates fellowship abbreviations dynamically across languages.
+ * E.g., SLAA in English/Spanish translates to DASA in Portuguese,
+ * OA translates to CCA, and GA translates to JA.
+ */
+export function translateFellowship(
+  code: string,
+  targetLang: 'English' | 'Español' | 'Português'
+): string {
+  if (!code) return code;
+  const trimmed = code.trim();
+  const upper = trimmed.toUpperCase();
+
+  for (const item of FELLOWSHIP_TRANSLATIONS) {
+    if (
+      item.English.toUpperCase() === upper ||
+      item.Español.toUpperCase() === upper ||
+      item.Português.toUpperCase() === upper
+    ) {
+      return item[targetLang];
+    }
+  }
+
+  // Handle alternate variations
+  if (upper === 'ASAA') {
+    return targetLang === 'Português' ? 'DASA' : 'SLAA';
+  }
+
+  return trimmed;
+}
+
+const SHORT_MONTHS: Record<'English' | 'Español' | 'Português', string[]> = {
+  English: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  Español: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+  Português: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+};
+
+/**
+ * Formats a date string into a compact DD MMM YYYY format (e.g. 12 Jul 2026)
+ * to maintain clean alignment and prevent overflowing or wrapping in tight rows.
+ */
+export const formatShortDate = (
+  dateStr: string,
+  lang: 'English' | 'Español' | 'Português' = 'English'
+): string => {
+  if (!dateStr) return '';
+  const parsed = parseSobrietyDateSafely(dateStr);
+  if (!parsed || isNaN(parsed.getTime())) return dateStr;
+
+  const day = String(parsed.getDate()).padStart(2, '0');
+  const monthIdx = parsed.getMonth();
+  const year = parsed.getFullYear();
+  const monthStr = SHORT_MONTHS[lang]?.[monthIdx] || SHORT_MONTHS.English[monthIdx];
+
+  return `${day} ${monthStr} ${year}`;
+};
+
 export const ProfileView: React.FC = () => {
   const [isClearingCache, setIsClearingCache] = useState(false);
   const {
@@ -88,6 +169,11 @@ export const ProfileView: React.FC = () => {
   const [customBrotherhoodInput, setCustomBrotherhoodInput] = useState<string>('');
   const [brotherhoodDateInput, setBrotherhoodDateInput] = useState<string>(() => formatLocalDateToYMD());
   const [brotherhoodSavedNotify, setBrotherhoodSavedNotify] = useState<boolean>(false);
+
+  // Automatically update selected fellowship abbreviation when user switches languages (e.g. SLAA -> DASA)
+  useEffect(() => {
+    setSelectedBrotherhood((prev) => translateFellowship(prev, state.language));
+  }, [state.language]);
 
   const isOtherSelected =
     selectedBrotherhood === 'Other' ||
@@ -212,10 +298,10 @@ export const ProfileView: React.FC = () => {
       {/* Profile Settings Bento Column */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto w-full">
         {/* Sobriety Reset/Update Settings */}
-        <article className="bg-white rounded-3xl p-4 border border-black/10 shadow-none flex flex-col justify-between">
+        <article className="bg-white rounded-3xl p-4 border border-black/10 shadow-none flex flex-col justify-between overflow-hidden">
           <div>
             <div className="flex items-center gap-2 text-[#143224] mb-2">
-              <Calendar className="w-4 h-4" />
+              <Calendar className="w-4 h-4 shrink-0" />
               <h3 className="font-sans text-[10px] font-bold uppercase tracking-widest">
                 {state.language === 'English' ? 'Configure Horizon Milestone' : state.language === 'Español' ? 'Configurar Hito de Horizon' : 'Configurar Marco do Horizon'}
               </h3>
@@ -229,7 +315,7 @@ export const ProfileView: React.FC = () => {
             </p>
           </div>
 
-          <div className="relative w-full max-w-full min-w-0 box-border">
+          <div className="relative w-full min-w-0 max-w-full">
             <input
               ref={milestoneDateRef}
               type="date"
@@ -241,24 +327,16 @@ export const ProfileView: React.FC = () => {
                   milestoneDateRef.current?.showPicker?.();
                 } catch {}
               }}
-              className="w-full max-w-full min-w-0 box-border bg-[#F8F5F2] border border-black/15 rounded-2xl p-3 pr-11 font-sans text-xs focus:outline-none focus:border-black text-[#111111] uppercase font-bold tracking-wider block cursor-pointer"
+              className="w-full min-w-0 max-w-full box-border bg-[#F8F5F2] border border-black/15 rounded-2xl p-3 pr-11 font-sans text-xs focus:outline-none focus:border-black text-[#111111] uppercase font-bold tracking-wider block cursor-pointer"
             />
-            <button
-              type="button"
-              onClick={() => {
-                try {
-                  milestoneDateRef.current?.showPicker?.();
-                } catch {
-                  milestoneDateRef.current?.focus();
-                }
-              }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center text-black/60 hover:text-black hover:bg-black/5 transition-colors cursor-pointer"
-              aria-label={state.language === 'Español' ? 'Abrir calendario' : state.language === 'Português' ? 'Abrir calendário' : 'Open calendar'}
+            <div
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center text-black/60 pointer-events-none"
+              aria-hidden="true"
             >
               <Calendar className="w-4 h-4" />
-            </button>
+            </div>
             {isSavedNotify && (
-              <div className="absolute right-12 top-1/2 -translate-y-1/2 flex items-center gap-1 text-black font-sans text-[9px] font-bold animate-fadeIn bg-[#F8F5F2] px-2 py-0.5 rounded-lg border border-black/5 shadow-2xs">
+              <div className="absolute right-12 top-1/2 -translate-y-1/2 flex items-center gap-1 text-black font-sans text-[9px] font-bold animate-fadeIn bg-[#F8F5F2] px-2 py-0.5 rounded-lg border border-black/5 shadow-2xs pointer-events-none">
                 <CheckCircle className="w-3.5 h-3.5 fill-current text-green-700" />
                 <span>{state.language === 'English' ? 'SAVED' : state.language === 'Español' ? 'GUARDADO' : 'SALVO'}</span>
               </div>
@@ -368,7 +446,7 @@ export const ProfileView: React.FC = () => {
                 )}
 
                 {/* Entrance Date Picker with guaranteed mobile calendar button */}
-                <div className="flex-1 min-w-[150px]">
+                <div className="flex-1 min-w-0">
                   <label className="font-sans text-[10px] font-bold text-black/60 uppercase tracking-widest block mb-1">
                     {state.language === 'Português'
                       ? 'Data de ingresso'
@@ -376,7 +454,7 @@ export const ProfileView: React.FC = () => {
                       ? 'Fecha de ingreso'
                       : 'Entry Date'}
                   </label>
-                  <div className="relative">
+                  <div className="relative w-full min-w-0 max-w-full">
                     <input
                       ref={brotherhoodDateRef}
                       type="date"
@@ -388,22 +466,14 @@ export const ProfileView: React.FC = () => {
                           brotherhoodDateRef.current?.showPicker?.();
                         } catch {}
                       }}
-                      className="w-full bg-white border border-black/15 rounded-2xl p-2.5 pr-10 font-sans text-xs focus:outline-none focus:border-black text-[#111111] uppercase font-bold tracking-wider cursor-pointer"
+                      className="w-full min-w-0 max-w-full box-border bg-white border border-black/15 rounded-2xl p-2.5 pr-10 font-sans text-xs focus:outline-none focus:border-black text-[#111111] uppercase font-bold tracking-wider cursor-pointer"
                     />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        try {
-                          brotherhoodDateRef.current?.showPicker?.();
-                        } catch {
-                          brotherhoodDateRef.current?.focus();
-                        }
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-black/60 hover:text-black hover:bg-black/5 transition-colors cursor-pointer"
-                      aria-label={state.language === 'Español' ? 'Abrir calendario' : state.language === 'Português' ? 'Abrir calendário' : 'Open calendar'}
+                    <div
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-black/60 pointer-events-none"
+                      aria-hidden="true"
                     >
                       <Calendar className="w-4 h-4" />
-                    </button>
+                    </div>
                   </div>
                 </div>
 
@@ -444,25 +514,20 @@ export const ProfileView: React.FC = () => {
                 {state.brotherhoods.map((entry) => {
                   const timeInFellowship = calculateTimeGrounded(entry.entryDate);
                   const formattedTime = formatAccumulatedTime(timeInFellowship, state.language);
-                  const parsedDate = parseSobrietyDateSafely(entry.entryDate);
-                  const displayDate = parsedDate
-                    ? parsedDate.toLocaleDateString(
-                        state.language === 'Português' ? 'pt-BR' : state.language === 'Español' ? 'es-ES' : 'en-US',
-                        { year: 'numeric', month: 'short', day: 'numeric' }
-                      )
-                    : entry.entryDate;
+                  const displayDate = formatShortDate(entry.entryDate, state.language);
+                  const localizedAbbreviation = translateFellowship(entry.brotherhood, state.language);
 
                   return (
                     <div
                       key={entry.id}
                       className="bg-[#F8F5F2] border border-black/10 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-2xs"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="font-mono text-xs font-black tracking-wider bg-black text-white px-2.5 py-1 rounded-xl shrink-0 uppercase shadow-2xs">
-                          {entry.brotherhood}
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <span className="font-mono text-[11px] sm:text-xs font-black tracking-wider bg-black text-white w-16 sm:w-20 py-1.5 rounded-xl shrink-0 uppercase shadow-2xs text-center flex items-center justify-center whitespace-nowrap">
+                          {localizedAbbreviation}
                         </span>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-sans text-[10px] font-bold text-black/50 uppercase tracking-wider">
+                          <span className="font-sans text-[10px] font-bold text-black/50 uppercase tracking-wider truncate">
                             {state.language === 'Português'
                               ? 'Data de ingresso:'
                               : state.language === 'Español'
@@ -727,7 +792,7 @@ export const ProfileView: React.FC = () => {
       {/* App License & Version Footer */}
       <footer className="text-center py-4 text-xs font-sans text-black/40 space-y-2">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-          <p className="font-medium text-black/50">Horizon v2.2.2</p>
+          <p className="font-medium text-black/50">Horizon v2.2.4</p>
           <span className="hidden sm:inline text-black/20">•</span>
           <button
             type="button"

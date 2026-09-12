@@ -10,7 +10,7 @@
     <!-- Instant PWA Version Check & Cache Purge: on version bump, force clears all service-worker & browser caches -->
     <script>
       (function() {
-        var APP_VERSION = '2.2.2';
+        var APP_VERSION = '2.2.4';
         var storedVersion = localStorage.getItem('horizon_app_version');
         if (!storedVersion || storedVersion !== APP_VERSION) {
           console.log('[Horizon] Version update detected (' + storedVersion + ' -> ' + APP_VERSION + '). Purging stale caches...');
