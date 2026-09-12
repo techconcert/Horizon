@@ -1,4 +1,4 @@
-const CACHE_NAME = 'horizon-cache-v2.1.36';
+const CACHE_NAME = 'horizon-cache-v2.2.2';
 const ASSETS_TO_CACHE = [
   '/manifest.json',
   '/favicon.png',

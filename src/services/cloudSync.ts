@@ -77,6 +77,7 @@ export interface CloudPayload {
   sponsorNumber?: string;
   supportLink?: string;
   lastSoberCheckInTime?: string;
+  brotherhoods?: any[];
   onboarded?: boolean;
 }
 
@@ -229,6 +230,13 @@ export function exportLocalStateToCloudPayload(): CloudPayload {
   const checkIn = localStorage.getItem('lastSoberCheckInTime');
   if (checkIn) payload.lastSoberCheckInTime = checkIn;
 
+  const brotherhoods = localStorage.getItem('brotherhoods');
+  if (brotherhoods) {
+    try {
+      payload.brotherhoods = JSON.parse(brotherhoods);
+    } catch {}
+  }
+
   payload.onboarded = true;
 
   return payload;
@@ -266,6 +274,9 @@ export function writePayloadToLocalStorage(payload: CloudPayload, syncCode?: str
   }
   if (payload.lastSoberCheckInTime) {
     localStorage.setItem('lastSoberCheckInTime', payload.lastSoberCheckInTime);
+  }
+  if (payload.brotherhoods) {
+    localStorage.setItem('brotherhoods', JSON.stringify(payload.brotherhoods));
   }
   if (syncCode) {
     localStorage.setItem('horizon_sync_code', normalizeSyncCode(syncCode));

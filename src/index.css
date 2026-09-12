@@ -62,3 +62,14 @@ body {
   color: #111111;
   font-family: var(--font-sans);
 }
+
+/* Ensure native date picker calendar icon is visible and touch friendly */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.7;
+  cursor: pointer;
+  display: block;
+  padding: 4px;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}

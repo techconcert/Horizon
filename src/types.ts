@@ -66,6 +66,12 @@ export interface Step {
   subLessons: SubLesson[];
 }
 
+export interface BrotherhoodEntry {
+  id: string;
+  brotherhood: string; // e.g. 'AA', 'NA', 'Al-Anon', 'CoDA', 'OA', 'GA', 'SLAA', 'CA', 'DA', 'ACA', or custom string
+  entryDate: string; // YYYY-MM-DD
+}
+
 export interface SanctuaryState {
   sobrietyStartDate: string; // ISO string
   reflections: Reflection[];
@@ -84,4 +90,5 @@ export interface SanctuaryState {
   supportLink?: string;
   syncCode?: string;
   lastCloudSync?: string | null;
+  brotherhoods?: BrotherhoodEntry[];
 }

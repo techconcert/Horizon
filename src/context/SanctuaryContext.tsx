@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { TabType, MoodType, Reflection, Step, SubLesson, SanctuaryState } from '../types';
+import { TabType, MoodType, Reflection, Step, SubLesson, SanctuaryState, BrotherhoodEntry } from '../types';
 import { INITIAL_STEPS } from '../lessons';
 import { 
   getOrCreateSyncCode, 
@@ -65,6 +65,8 @@ interface SanctuaryContextType {
   cloudQuotaExceeded: boolean;
   syncToCloud: () => Promise<boolean>;
   restoreFromSyncCode: (code: string) => Promise<{ success: boolean; error?: string }>;
+  addBrotherhood: (brotherhood: string, entryDate: string) => void;
+  deleteBrotherhood: (id: string) => void;
 }
 
 const SanctuaryContext = createContext<SanctuaryContextType | undefined>(undefined);
@@ -505,6 +507,18 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return localStorage.getItem('supportLink') || '';
   });
 
+  const [brotherhoods, setBrotherhoods] = useState<BrotherhoodEntry[]>(() => {
+    const saved = localStorage.getItem('brotherhoods');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
   const [syncCode, setSyncCode] = useState<string>(() => getOrCreateSyncCode());
   const [lastCloudSync, setLastCloudSync] = useState<string | null>(() => {
     return localStorage.getItem('horizon_last_cloud_sync') || null;
@@ -633,6 +647,10 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     localStorage.setItem('onboarded', onboarded.toString());
   }, [onboarded]);
 
+  useEffect(() => {
+    localStorage.setItem('brotherhoods', JSON.stringify(brotherhoods));
+  }, [brotherhoods]);
+
   // Setters
   const setActiveTab = (tab: TabType) => setActiveTabState(tab);
   const setCurrentLessonId = (id: string | null) => setCurrentLessonIdState(id);
@@ -653,6 +671,19 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const setSponsorNumber = (val: string) => setSponsorNumberState(val);
   const setSupportLink = (val: string) => setSupportLinkState(val);
   const setOnboarded = (val: boolean) => setOnboardedState(val);
+
+  const addBrotherhood = (brotherhood: string, entryDate: string) => {
+    const newEntry: BrotherhoodEntry = {
+      id: Date.now().toString() + '-' + Math.random().toString(36).substring(2, 6),
+      brotherhood: brotherhood.trim(),
+      entryDate: entryDate.trim(),
+    };
+    setBrotherhoods(prev => [...prev, newEntry]);
+  };
+
+  const deleteBrotherhood = (id: string) => {
+    setBrotherhoods(prev => prev.filter(b => b.id !== id));
+  };
 
   const addReflection = (title: string, content: string, moods: MoodType[]) => {
     const newRef: Reflection = {
@@ -936,6 +967,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (data.sponsorNumber !== undefined) setSponsorNumberState(data.sponsorNumber);
       if (data.supportLink !== undefined) setSupportLinkState(data.supportLink);
       if (data.lastSoberCheckInTime) setLastSoberCheckInTime(data.lastSoberCheckInTime);
+      if (data.brotherhoods) setBrotherhoods(data.brotherhoods);
 
       const normCode = normalizeSyncCode(code);
       setSyncCode(normCode);
@@ -956,13 +988,13 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setCloudQuotaExceeded(true);
       return;
     }
-    if (onboarded || reflections.length > 0) {
+    if (onboarded || reflections.length > 0 || brotherhoods.length > 0) {
       const timer = setTimeout(() => {
         syncToCloud().catch(() => {});
       }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [sobrietyStartDate, reflections, steps, customMoods, lastSoberCheckInTime, onboarded, syncEnabled]);
+  }, [sobrietyStartDate, reflections, steps, customMoods, lastSoberCheckInTime, onboarded, syncEnabled, brotherhoods]);
 
   // Initial cloud restore listener if #sync= was in URL
   useEffect(() => {
@@ -999,7 +1031,8 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           supportLink,
           onboarded,
           syncCode,
-          lastCloudSync
+          lastCloudSync,
+          brotherhoods
         },
         setActiveTab,
         setCurrentLessonId,
@@ -1034,6 +1067,8 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         cloudQuotaExceeded,
         syncToCloud,
         restoreFromSyncCode,
+        addBrotherhood,
+        deleteBrotherhood,
       }}
     >
       {children}

@@ -221,7 +221,14 @@ const SanctuaryContent: React.FC = () => {
       {/* Top Header Navigation Bar (non-sticky, scrolls with page) */}
       <header className="relative w-full z-40 px-4 md:px-8 py-3 flex items-center justify-between bg-transparent">
         <div className="flex flex-col">
-          <h1 className="font-serif text-2xl md:text-3xl text-[#143224] font-semibold tracking-tight drop-shadow-[0_1px_2px_rgba(255,255,255,0.7)]">
+          <h1
+            className="font-serif text-2xl md:text-3xl text-[#143224] font-semibold tracking-tight"
+            style={{
+              WebkitTextStroke: '0.65px rgba(255, 255, 255, 0.95)',
+              paintOrder: 'stroke fill',
+              textShadow: '0 0 1px rgba(255,255,255,0.95), 0 1px 2px rgba(255,255,255,0.8)',
+            }}
+          >
             {getTranslation('app_title')}
           </h1>
           <span className="hidden md:inline-block font-sans text-[10px] font-bold text-[#143224]/70 tracking-widest uppercase mt-0.5">
@@ -232,7 +239,7 @@ const SanctuaryContent: React.FC = () => {
         {/* Centered Step Indicator (Plain text only, centered in top bar) */}
         {(state.activeTab === 'trackers' || state.activeTab === 'meditation') && (
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
-            <span className="font-sans text-[11px] sm:text-xs font-extrabold tracking-widest uppercase text-[#143224]/80 select-none">
+            <span className="font-sans text-[9px] sm:text-[10px] font-bold tracking-[0.2em] uppercase text-[#143224]/75 select-none">
               {state.activeTab === 'trackers' && (isEn ? 'STEP 10' : isEs ? 'PASO 10' : 'PASSO 10')}
               {state.activeTab === 'meditation' && (isEn ? 'STEP 11' : isEs ? 'PASO 11' : 'PASSO 11')}
             </span>

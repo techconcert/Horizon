@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import React, { useState, useEffect } from 'react';
-import { useSanctuary, formatLocalDateToYMD, parseSobrietyDateSafely, formatAccumulatedTime } from '../context/SanctuaryContext';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSanctuary, formatLocalDateToYMD, parseSobrietyDateSafely, formatAccumulatedTime, calculateTimeGrounded } from '../context/SanctuaryContext';
 import {
   Calendar,
   Lock,
@@ -24,9 +24,18 @@ import {
   Cloud,
   CloudDownload,
   CloudUpload,
-  Loader2
+  Loader2,
+  Users,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { forceClearCacheAndReload } from '../utils/versionCheck';
+
+const FELLOWSHIP_OPTIONS: Record<'English' | 'Español' | 'Português', string[]> = {
+  English: ['AA', 'NA', 'CA', 'CMA', 'MA', 'OA', 'GA', 'SLAA', 'SA', 'DA', 'Other'],
+  Español: ['AA', 'NA', 'CA', 'CMA', 'MA', 'OA', 'GA', 'SLAA', 'SA', 'DA', 'Otro'],
+  Português: ['AA', 'NA', 'CA', 'CMA', 'MA', 'CCA', 'JA', 'DASA', 'SA', 'DA', 'Outro'],
+};
 
 export const ProfileView: React.FC = () => {
   const [isClearingCache, setIsClearingCache] = useState(false);
@@ -46,7 +55,9 @@ export const ProfileView: React.FC = () => {
     lastCloudSync,
     cloudQuotaExceeded,
     syncToCloud,
-    restoreFromSyncCode
+    restoreFromSyncCode,
+    addBrotherhood,
+    deleteBrotherhood
   } = useSanctuary();
 
   const [dateInput, setDateInput] = useState(() => {
@@ -55,6 +66,9 @@ export const ProfileView: React.FC = () => {
     const d = parseSobrietyDateSafely(state.sobrietyStartDate);
     return d ? formatLocalDateToYMD(d) : '';
   });
+
+  const milestoneDateRef = useRef<HTMLInputElement>(null);
+  const brotherhoodDateRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (state.sobrietyStartDate) {
@@ -68,6 +82,34 @@ export const ProfileView: React.FC = () => {
   }, [state.sobrietyStartDate]);
 
   const [isSavedNotify, setIsSavedNotify] = useState(false);
+
+  // Brotherhoods / Fellowships State
+  const [selectedBrotherhood, setSelectedBrotherhood] = useState<string>('AA');
+  const [customBrotherhoodInput, setCustomBrotherhoodInput] = useState<string>('');
+  const [brotherhoodDateInput, setBrotherhoodDateInput] = useState<string>(() => formatLocalDateToYMD());
+  const [brotherhoodSavedNotify, setBrotherhoodSavedNotify] = useState<boolean>(false);
+
+  const isOtherSelected =
+    selectedBrotherhood === 'Other' ||
+    selectedBrotherhood === 'Otro' ||
+    selectedBrotherhood === 'Outro';
+
+  const handleAddBrotherhood = (e: React.FormEvent) => {
+    e.preventDefault();
+    const finalName = isOtherSelected
+      ? customBrotherhoodInput.trim()
+      : selectedBrotherhood.trim();
+
+    if (!finalName) return;
+    if (!brotherhoodDateInput) return;
+
+    addBrotherhood(finalName, brotherhoodDateInput);
+    if (isOtherSelected) {
+      setCustomBrotherhoodInput('');
+    }
+    setBrotherhoodSavedNotify(true);
+    setTimeout(() => setBrotherhoodSavedNotify(false), 2500);
+  };
 
   // Firestore Sync States
   const [remoteSyncCodeInput, setRemoteSyncCodeInput] = useState('');
@@ -156,24 +198,14 @@ export const ProfileView: React.FC = () => {
   return (
     <div className="flex flex-col gap-5">
       {/* Cumulative Progress Card */}
-      <section className="bg-black text-white rounded-3xl p-4 md:p-5 shadow-none relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#F8F5F2]/10 border border-[#F8F5F2]/10 flex items-center justify-center shrink-0">
-              <User className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <span className="font-sans text-[10px] uppercase tracking-widest font-bold text-white/60">
-                {getTranslation('cumulative_progress')}
-              </span>
-              <h2 className="font-serif text-xl md:text-2xl font-normal mt-0.5 leading-snug">
-                {formatAccumulatedTime(timeGroundedString, state.language)}
-              </h2>
-              <p className="font-sans text-xs text-white/75 mt-0.5 leading-relaxed italic">
-                {getTranslation('sanctuary_secure')}
-              </p>
-            </div>
-          </div>
+      <section className="bg-black text-white rounded-3xl p-5 md:p-6 shadow-none relative overflow-hidden text-center">
+        <div className="relative z-10 flex flex-col items-center justify-center text-center">
+          <span className="font-sans text-[10px] uppercase tracking-widest font-bold text-white/60">
+            {getTranslation('cumulative_progress')}
+          </span>
+          <h2 className="font-serif text-xl md:text-2xl font-normal mt-1 leading-snug">
+            {formatAccumulatedTime(timeGroundedString, state.language)}
+          </h2>
         </div>
       </section>
 
@@ -182,7 +214,7 @@ export const ProfileView: React.FC = () => {
         {/* Sobriety Reset/Update Settings */}
         <article className="bg-white rounded-3xl p-4 border border-black/10 shadow-none flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 text-red-950 mb-2">
+            <div className="flex items-center gap-2 text-[#143224] mb-2">
               <Calendar className="w-4 h-4" />
               <h3 className="font-sans text-[10px] font-bold uppercase tracking-widest">
                 {state.language === 'English' ? 'Configure Horizon Milestone' : state.language === 'Español' ? 'Configurar Hito de Horizon' : 'Configurar Marco do Horizon'}
@@ -190,23 +222,43 @@ export const ProfileView: React.FC = () => {
             </div>
             <p className="font-sans text-xs text-black/60 leading-relaxed mb-3">
               {state.language === 'English'
-                ? 'Adjust your sobriety date and starting time to accurately synchronize your grounding clock and cumulative milestones.'
+                ? 'Adjust your sobriety date for your accumulate progress.'
                 : state.language === 'Español'
-                ? 'Ajusta tu fecha de sobriedad y la hora de inicio para sincronizar con precisión tu reloj y tus logros acumulativos.'
-                : 'Ajuste sua data de sobriedade e hora de início para sincronizar com precisão o seu relógio e marcos acumulativos.'}
+                ? 'Ajusta tu fecha de sobriedad para tu progreso acumulado.'
+                : 'Ajuste sua data de sobriedade para o seu progresso acumulado.'}
             </p>
           </div>
 
           <div className="relative w-full max-w-full min-w-0 box-border">
             <input
+              ref={milestoneDateRef}
               type="date"
               value={dateInput}
               onChange={handleDateChange}
               max={formatLocalDateToYMD()}
-              className="w-full max-w-full min-w-0 box-border bg-[#F8F5F2] border border-black/15 rounded-2xl p-3 font-sans text-xs focus:outline-none focus:border-black text-[#111111] uppercase font-bold tracking-wider block appearance-none"
+              onClick={() => {
+                try {
+                  milestoneDateRef.current?.showPicker?.();
+                } catch {}
+              }}
+              className="w-full max-w-full min-w-0 box-border bg-[#F8F5F2] border border-black/15 rounded-2xl p-3 pr-11 font-sans text-xs focus:outline-none focus:border-black text-[#111111] uppercase font-bold tracking-wider block cursor-pointer"
             />
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  milestoneDateRef.current?.showPicker?.();
+                } catch {
+                  milestoneDateRef.current?.focus();
+                }
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center text-black/60 hover:text-black hover:bg-black/5 transition-colors cursor-pointer"
+              aria-label={state.language === 'Español' ? 'Abrir calendario' : state.language === 'Português' ? 'Abrir calendário' : 'Open calendar'}
+            >
+              <Calendar className="w-4 h-4" />
+            </button>
             {isSavedNotify && (
-              <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-black font-sans text-[9px] font-bold animate-fadeIn bg-[#F8F5F2] px-2 py-0.5 rounded-lg border border-black/5">
+              <div className="absolute right-12 top-1/2 -translate-y-1/2 flex items-center gap-1 text-black font-sans text-[9px] font-bold animate-fadeIn bg-[#F8F5F2] px-2 py-0.5 rounded-lg border border-black/5 shadow-2xs">
                 <CheckCircle className="w-3.5 h-3.5 fill-current text-green-700" />
                 <span>{state.language === 'English' ? 'SAVED' : state.language === 'Español' ? 'GUARDADO' : 'SALVO'}</span>
               </div>
@@ -214,23 +266,21 @@ export const ProfileView: React.FC = () => {
           </div>
         </article>
 
-
-
         {/* Bilingual Language Selection */}
         <article className="bg-white rounded-3xl p-4 border border-black/10 shadow-none flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 text-red-900 mb-2">
+            <div className="flex items-center gap-2 text-[#143224] mb-2">
               <Globe className="w-4 h-4" />
               <h3 className="font-sans text-[10px] font-bold uppercase tracking-widest">
-                {getTranslation('preferences')}
+                {getTranslation('language')}
               </h3>
             </div>
             <p className="font-sans text-xs text-black/60 leading-relaxed mb-3">
               {state.language === 'English'
-                ? 'Select your primary language preference. The system automatically translates all features, lessons, and prompts.'
+                ? 'Select your primary language preference.'
                 : state.language === 'Español'
-                ? 'Selecciona tu preferencia de idioma. El sistema traduce automáticamente todas las funciones, lecciones e indicaciones.'
-                : 'Selecione a sua preferência de idioma principal. O sistema traduz automaticamente todas as funções, lições e comandos.'}
+                ? 'Selecciona tu preferencia de idioma.'
+                : 'Selecione a sua preferência de idioma principal.'}
             </p>
           </div>
 
@@ -250,12 +300,213 @@ export const ProfileView: React.FC = () => {
           </div>
         </article>
 
+        {/* Brotherhood & Fellowships Selection Card (Unlimited list with entrance date / 'ingresso') */}
+        <article className="bg-white rounded-3xl p-4 md:p-5 border border-black/10 shadow-none flex flex-col justify-between md:col-span-2">
+          <div>
+            <div className="flex items-center gap-2 text-[#143224] mb-2">
+              <Users className="w-4 h-4" />
+              <h3 className="font-sans text-[10px] font-bold uppercase tracking-widest">
+                {state.language === 'Português'
+                  ? 'Irmandades de Recuperação'
+                  : state.language === 'Español'
+                  ? 'Comunidades y Confraternidades'
+                  : 'Brotherhoods & Fellowships'}
+              </h3>
+            </div>
 
+            <p className="font-sans text-xs text-black/60 leading-relaxed mb-4">
+              {state.language === 'Português'
+                ? 'Selecione uma irmandade e registre sua data de ingresso. Você pode acompanhar várias irmandades.'
+                : state.language === 'Español'
+                ? 'Selecciona una confraternidad y registra tu fecha de ingreso. Puedes registrar múltiples confraternidades.'
+                : 'Select a fellowship and record your entrance date. You can track multiple fellowships.'}
+            </p>
+
+            {/* Brotherhood Add Form */}
+            <form onSubmit={handleAddBrotherhood} className="bg-[#FAF8F5] border border-black/10 rounded-2xl p-3 sm:p-4">
+              <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-end">
+                {/* Brotherhood Selector */}
+                <div className="flex-1 min-w-[140px]">
+                  <label className="font-sans text-[10px] font-bold text-black/60 uppercase tracking-widest block mb-1">
+                    {state.language === 'Português'
+                      ? 'Irmandade'
+                      : state.language === 'Español'
+                      ? 'Confraternidad'
+                      : 'Brotherhood'}
+                  </label>
+                  <select
+                    value={selectedBrotherhood}
+                    onChange={(e) => setSelectedBrotherhood(e.target.value)}
+                    className="w-full bg-white border border-black/15 rounded-2xl p-2.5 font-sans text-xs font-bold text-[#111111] focus:outline-none focus:border-black cursor-pointer uppercase tracking-wider"
+                  >
+                    {(FELLOWSHIP_OPTIONS[state.language] || FELLOWSHIP_OPTIONS.English).map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Custom Brotherhood Name if 'Other' chosen */}
+                {isOtherSelected && (
+                  <div className="flex-1 min-w-[140px] animate-fadeIn">
+                    <label className="font-sans text-[10px] font-bold text-black/60 uppercase tracking-widest block mb-1">
+                      {state.language === 'Português'
+                        ? 'Nome / Sigla'
+                        : state.language === 'Español'
+                        ? 'Nombre / Sigla'
+                        : 'Name / Abbreviation'}
+                    </label>
+                    <input
+                      type="text"
+                      value={customBrotherhoodInput}
+                      onChange={(e) => setCustomBrotherhoodInput(e.target.value)}
+                      placeholder={state.language === 'Português' ? 'ex. SAA, CMA, DRA...' : state.language === 'Español' ? 'ej. SAA, CMA, DRA...' : 'e.g. SAA, CMA, DRA...'}
+                      className="w-full bg-white border border-black/15 rounded-2xl p-2.5 font-sans text-xs focus:outline-none focus:border-black text-[#111111] font-bold"
+                    />
+                  </div>
+                )}
+
+                {/* Entrance Date Picker with guaranteed mobile calendar button */}
+                <div className="flex-1 min-w-[150px]">
+                  <label className="font-sans text-[10px] font-bold text-black/60 uppercase tracking-widest block mb-1">
+                    {state.language === 'Português'
+                      ? 'Data de ingresso'
+                      : state.language === 'Español'
+                      ? 'Fecha de ingreso'
+                      : 'Entry Date'}
+                  </label>
+                  <div className="relative">
+                    <input
+                      ref={brotherhoodDateRef}
+                      type="date"
+                      value={brotherhoodDateInput}
+                      onChange={(e) => setBrotherhoodDateInput(e.target.value)}
+                      max={formatLocalDateToYMD()}
+                      onClick={() => {
+                        try {
+                          brotherhoodDateRef.current?.showPicker?.();
+                        } catch {}
+                      }}
+                      className="w-full bg-white border border-black/15 rounded-2xl p-2.5 pr-10 font-sans text-xs focus:outline-none focus:border-black text-[#111111] uppercase font-bold tracking-wider cursor-pointer"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          brotherhoodDateRef.current?.showPicker?.();
+                        } catch {
+                          brotherhoodDateRef.current?.focus();
+                        }
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-black/60 hover:text-black hover:bg-black/5 transition-colors cursor-pointer"
+                      aria-label={state.language === 'Español' ? 'Abrir calendario' : state.language === 'Português' ? 'Abrir calendário' : 'Open calendar'}
+                    >
+                      <Calendar className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Add button */}
+                <button
+                  type="submit"
+                  disabled={isOtherSelected && !customBrotherhoodInput.trim()}
+                  className="bg-[#183628] hover:bg-[#254d3b] text-white font-sans text-xs font-bold px-4 py-2.5 rounded-2xl transition-colors cursor-pointer flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>
+                    {state.language === 'Português'
+                      ? 'Adicionar'
+                      : state.language === 'Español'
+                      ? 'Agregar'
+                      : 'Add'}
+                  </span>
+                </button>
+              </div>
+
+              {brotherhoodSavedNotify && (
+                <div className="mt-2 text-emerald-800 font-sans text-[11px] font-bold flex items-center gap-1.5 animate-fadeIn">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>
+                    {state.language === 'Português'
+                      ? 'Irmandade adicionada com sucesso!'
+                      : state.language === 'Español'
+                      ? '¡Confraternidad agregada con éxito!'
+                      : 'Fellowship added successfully!'}
+                  </span>
+                </div>
+              )}
+            </form>
+
+            {/* Fellowship List (No limit) */}
+            {state.brotherhoods && state.brotherhoods.length > 0 ? (
+              <div className="flex flex-col gap-2.5 mt-4">
+                {state.brotherhoods.map((entry) => {
+                  const timeInFellowship = calculateTimeGrounded(entry.entryDate);
+                  const formattedTime = formatAccumulatedTime(timeInFellowship, state.language);
+                  const parsedDate = parseSobrietyDateSafely(entry.entryDate);
+                  const displayDate = parsedDate
+                    ? parsedDate.toLocaleDateString(
+                        state.language === 'Português' ? 'pt-BR' : state.language === 'Español' ? 'es-ES' : 'en-US',
+                        { year: 'numeric', month: 'short', day: 'numeric' }
+                      )
+                    : entry.entryDate;
+
+                  return (
+                    <div
+                      key={entry.id}
+                      className="bg-[#F8F5F2] border border-black/10 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-2xs"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="font-mono text-xs font-black tracking-wider bg-black text-white px-2.5 py-1 rounded-xl shrink-0 uppercase shadow-2xs">
+                          {entry.brotherhood}
+                        </span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-sans text-[10px] font-bold text-black/50 uppercase tracking-wider">
+                            {state.language === 'Português'
+                              ? 'Data de ingresso:'
+                              : state.language === 'Español'
+                              ? 'Fecha de ingreso:'
+                              : 'Entry date:'}{' '}
+                            <span className="text-black/80 font-semibold">{displayDate}</span>
+                          </span>
+                          <span className="font-serif text-sm text-[#143224] font-semibold mt-0.5 truncate">
+                            {formattedTime}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => deleteBrotherhood(entry.id)}
+                        className="p-2 text-black/35 hover:text-red-600 hover:bg-black/5 rounded-xl transition-colors cursor-pointer shrink-0"
+                        title={state.language === 'Português' ? 'Remover irmandade' : state.language === 'Español' ? 'Eliminar confraternidad' : 'Remove fellowship'}
+                        aria-label={state.language === 'Português' ? 'Remover irmandade' : state.language === 'Español' ? 'Eliminar confraternidad' : 'Remove fellowship'}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-[#FAF8F5] rounded-2xl p-3.5 text-center border border-dashed border-black/15 mt-3">
+                <p className="font-sans text-xs text-black/50">
+                  {state.language === 'Português'
+                    ? 'Nenhuma irmandade adicionada ainda. Selecione uma opção acima para registrar sua data de ingresso.'
+                    : state.language === 'Español'
+                    ? 'Aún no has agregado confraternidades. Selecciona una arriba para registrar tu fecha de ingreso.'
+                    : 'No fellowships added yet. Select a fellowship above to record your entrance date.'}
+                </p>
+              </div>
+            )}
+          </div>
+        </article>
 
         {/* Support Settings & Contacts Card */}
         <article className="bg-white rounded-3xl p-4 border border-black/10 shadow-none flex flex-col justify-between md:col-span-2">
           <div>
-            <div className="flex items-center gap-2 text-red-900 mb-2">
+            <div className="flex items-center gap-2 text-[#143224] mb-2">
               <HeartHandshake className="w-4 h-4" />
               <h3 className="font-sans text-[10px] font-bold uppercase tracking-widest">
                 {state.language === 'English'
@@ -267,10 +518,10 @@ export const ProfileView: React.FC = () => {
             </div>
             <p className="font-sans text-xs text-black/60 leading-relaxed mb-4">
               {state.language === 'English'
-                ? 'Customize your preferred helpline, sponsor (Padrinho/Madrinha), and video conference links. These will instantly populate your "Reach Out" support panel.'
+                ? 'Customize your preferred helpline, sponsor, and video conference links. These will instantly populate your "Reach Out" support panel.'
                 : state.language === 'Español'
-                ? 'Personaliza tu línea de ayuda, patrocinador (Padrinho/Madrinha) y enlaces de videoconferencia. Estos se mostrarán al presionar "Pedir Apoyo".'
-                : 'Personalize sua linha de ajuda, patrocinador (Padrinho/Madrinha) e links de videoconferência. Estes serão mostrados ao clicar em "Pedir Apoio".'}
+                ? 'Personaliza tu línea de ayuda, padrino y enlaces de videoconferencia. Estos se mostrarán al presionar "Pedir Apoyo".'
+                : 'Personalize sua linha de apoio, padrinho/madrinha e links de videoconferência. Estes serão mostrados ao clicar em "Pedir Apoio".'}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -311,7 +562,7 @@ export const ProfileView: React.FC = () => {
               {/* Sponsor Name */}
               <div className="flex flex-col gap-1">
                 <label className="font-sans text-[10px] font-bold text-black/60 uppercase tracking-widest">
-                  {state.language === 'English' ? 'Sponsor Name' : state.language === 'Español' ? 'Nombre del Patrocinador' : 'Nome do Padrinho / Madrinha'}
+                  {state.language === 'English' ? 'Sponsor Name' : state.language === 'Español' ? 'Nombre del Padrino' : 'Nome do Padrinho / Madrinha'}
                 </label>
                 <div className="relative">
                   <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/40" />
@@ -328,7 +579,7 @@ export const ProfileView: React.FC = () => {
               {/* Sponsor Phone */}
               <div className="flex flex-col gap-1">
                 <label className="font-sans text-[10px] font-bold text-black/60 uppercase tracking-widest">
-                  {state.language === 'English' ? 'Sponsor Phone Number' : state.language === 'Español' ? 'Teléfono del Patrocinador' : 'Telefone do Padrinho / Madrinha'}
+                  {state.language === 'English' ? 'Sponsor Phone Number' : state.language === 'Español' ? 'Teléfono del Padrino' : 'Telefone do Padrinho / Madrinha'}
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/40" />
@@ -350,7 +601,7 @@ export const ProfileView: React.FC = () => {
       <section className="bg-white p-5 rounded-3xl border border-black/10 shadow-none max-w-5xl mx-auto w-full">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-4 border-b border-black/10">
           <div>
-            <div className="flex items-center gap-2 text-amber-950 mb-1">
+            <div className="flex items-center gap-2 text-[#143224] mb-1">
               <Cloud className="w-4 h-4" />
               <h3 className="font-sans text-[10px] font-bold uppercase tracking-widest">
                 {state.language === 'English' ? 'Anonymous Cloud Sync & Multi-Device' : state.language === 'Español' ? 'Sincronización Anónima en la Nube' : 'Sincronização Anônima na Nuvem'}
@@ -476,7 +727,7 @@ export const ProfileView: React.FC = () => {
       {/* App License & Version Footer */}
       <footer className="text-center py-4 text-xs font-sans text-black/40 space-y-2">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-          <p className="font-medium text-black/50">Horizon v2.1.36</p>
+          <p className="font-medium text-black/50">Horizon v2.2.2</p>
           <span className="hidden sm:inline text-black/20">•</span>
           <button
             type="button"
