@@ -793,14 +793,13 @@ export const HomeView: React.FC = () => {
                     />
                   )}
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center font-mono text-[10px] font-bold transition-all duration-300 ${
+                    aria-label={`Practice step ${step}: ${isFilled ? 'completed' : 'pending'}`}
+                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ${
                       isFilled
-                        ? 'bg-[#3e6355] text-white ring-2 ring-[#3e6355]/25 shadow-2xs scale-105'
-                        : 'bg-[#FAF8F5] text-black/35 border-2 border-black/25'
+                        ? 'bg-[#3e6355] border-2 border-[#3e6355] ring-2 ring-[#3e6355]/25 shadow-2xs scale-105'
+                        : 'bg-transparent border-2 border-black/30'
                     }`}
-                  >
-                    {isFilled ? '●' : '○'}
-                  </div>
+                  />
                 </React.Fragment>
               );
             })}
@@ -1054,9 +1053,14 @@ export const HomeView: React.FC = () => {
                       {idx > 0 && (
                         <div className={`h-[2px] w-6 rounded-full transition-colors duration-300 ${dailyStatus.completedCount >= step ? 'bg-[#3e6355]' : 'bg-black/15'}`} />
                       )}
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center font-mono text-[9px] font-bold transition-all duration-300 ${isFilled ? 'bg-[#3e6355] text-white shadow-xs' : 'bg-white text-black/40 border border-black/20'}`}>
-                        {isFilled ? '●' : '○'}
-                      </div>
+                      <div
+                        aria-label={`Practice step ${step}: ${isFilled ? 'completed' : 'pending'}`}
+                        className={`w-5 h-5 rounded-full transition-all duration-300 ${
+                          isFilled
+                            ? 'bg-[#3e6355] border-2 border-[#3e6355] ring-1 ring-[#3e6355]/25 shadow-2xs'
+                            : 'bg-transparent border-2 border-black/30'
+                        }`}
+                      />
                     </React.Fragment>
                   );
                 })}

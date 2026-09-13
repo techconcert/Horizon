@@ -336,32 +336,32 @@ export const MeditationView: React.FC = () => {
       icon: Sparkles,
       text: getText(
         'God (or Higher Power), grant me the serenity to accept the things I cannot change, the courage to change the things I can, and the wisdom to know the difference.',
-        'Dios, concédeme la serenidad para aceptar las cosas que no puedo cambiar, valor para cambiar las que puedo, y sabiduría para reconocer la diferencia.',
-        'Concedei-me, Senhor, a serenidade necessária para aceitar as coisas que não posso modificar, coragem para modificar aquelas que posso, e sabedoria para distinguir umas das outras.'
+        'Dios (o Poder Superior), concédeme la serenidad para aceptar las cosas que no puedo cambiar, valor para cambiar las que puedo, y sabiduría para reconocer la diferencia.',
+        'Concedei-me, Senhor (ou Poder Superior), a serenidade necessária para aceitar as coisas que não posso modificar, coragem para modificar aquelas que posso, e sabedoria para distinguir umas das outras.'
       )
     },
     {
       id: 'third_step',
       title: getText('Third Step Surrender', 'Tercer Paso de Rendición', 'Terceiro Passo de Rendição'),
-      sub: getText('Relief from the bondage of self', 'Liberarse de las ataduras del ego', 'Libertação das amarras do ego'),
+      sub: getText('Relief from the bondage of self', 'Liberación de las ataduras del ego', 'Libertação da escravidão do ego'),
       fellowships: getText('Step 3 prayer of willingness', 'Oración del Paso 3 de buena voluntad', 'Oração do Passo 3 de boa vontade'),
       icon: HeartHandshake,
       text: getText(
-        'Higher Power, I offer myself to Thee — to build with me and to do with me as Thou wilt. Relieve me of the bondage of self, that I may better do Thy will. Take away my difficulties, that victory over them may bear witness to those I would help of Thy Power, Thy Love, and Thy Way of life.',
-        'Poder Superior, me ofrezco a Ti para que construyas conmigo y hagas de mí lo que desees. Líbrame de las ataduras del egoísmo, para que pueda cumplir mejor Tu voluntad. Quita mis dificultades, para que la victoria sobre ellas sea testimonio ante aquellos a quienes pueda ayudar de Tu Poder, Tu Amor y Tu Forma de vida.',
-        'Poder Superior, entrego-me a Ti, para que construas comigo e faças de mim o que for da Tua vontade. Livra-me das amarras do meu ego, para que eu possa cumprir a Tua vontade. Elimina as minhas dificuldades, para que a vitória sobre elas seja testemunho, para aqueles a quem eu possa ajudar, do Teu Poder, do Teu Amor e do Teu Modo de vida.'
+        'God (or Higher Power), I offer myself to Thee — to build with me and to do with me as Thou wilt. Relieve me of the bondage of self, that I may better do Thy will. Take away my difficulties, that victory over them may bear witness to those I would help of Thy Power, Thy Love, and Thy Way of life. May I do Thy will always.',
+        'Dios (o Poder Superior), me ofrezco a Ti para que obres en mí y hagas conmigo Tu voluntad. Líbrame de mi propio encadenamiento, para que pueda cumplir mejor con Tu voluntad. Líbrame de mis dificultades, y que la victoria sobre ellas sea el testimonio para aquellos a quienes ayude de Tu poder, Tu amor y Tu forma de vida. Que siempre haga Tu voluntad.',
+        'Deus (ou Poder Superior), ofereço-me a Ti, para que trabalhes em mim e faças comigo o que desejares. Liberta-me da escravidão do ego, para que eu possa realizar melhor a Tua vontade. Remove as minhas dificuldades, para que a vitória sobre elas possa dar testemunho, diante daqueles a quem ajudarei, de Teu Poder, de Teu Amor e de Teu Modo de Vida. Que eu faça sempre a Tua vontade.'
       )
     },
     {
       id: 'seventh_step',
       title: getText('Seventh Step Humility', 'Séptimo Paso de Humildad', 'Sétimo Passo de Humildade'),
-      sub: getText('Removal of character defects', 'Remoción de defectos de carácter', 'Remoção dos defeitos de caráter'),
+      sub: getText('Removal of character defects', 'Eliminación de defectos de carácter', 'Remoção dos defeitos de caráter'),
       fellowships: getText('Step 7 prayer of humble transformation', 'Oración del Paso 7 de humilde transformación', 'Oração do Passo 7 de humilde transformação'),
       icon: Feather,
       text: getText(
-        'My Creator, I am now willing that you should have all of me, good and bad. I pray that you now remove from me every single defect of character which stands in the way of my usefulness to you and my fellows. Grant me strength, as I go out from here, to do your bidding.',
-        'Mi Creador, estoy dispuesto a que tomes todo lo que soy, lo bueno y lo malo. Te ruego que elimines de mí cada defecto de carácter que obstaculice mi utilidad para Ti y para mis semejantes. Concédeme fuerza, al salir de aquí, para cumplir Tu voluntad.',
-        'Meu Criador, estou agora disposto a que fiques com tudo o que sou, de bom e de mau. Rogo-Te que retires de mim cada defeito de caráter que se interpõe no caminho da minha utilidade para Contigo e com meus semelhantes. Concede-me força para seguir o Teu caminho.'
+        'My Creator, I am now willing that you should have all of me, good and bad. I pray that you now remove from me every single defect of character which stands in the way of my usefulness to you and my fellows. Grant me strength, as I go out from here, to do your bidding. Amen.',
+        'Creador mío, estoy dispuesto a que tomes todo lo que soy, bueno y malo. Te ruego que elimines de mí cada uno de los defectos de carácter que me obstaculizan en el camino para que logre ser útil a Ti y a mis semejantes. Dame la fortaleza para que, al salir de aquí, cumpla con Tu voluntad. Amén.',
+        'Meu Criador, agora estou pronto para que tenhas tudo de mim, o bom e o mau. Rogo-Te que removas de mim cada defeito de caráter que esteja no caminho da minha utilidade para Ti e para meus semelhantes. Concede-me forças para que, ao sair daqui, eu faça a Tua vontade. Amém.'
       )
     },
     {
@@ -372,32 +372,32 @@ export const MeditationView: React.FC = () => {
       icon: Sun,
       text: getText(
         'Lord, make me an instrument of your peace: where there is hatred, let me sow love; where there is injury, pardon; where there is doubt, faith; where there is despair, hope; where there is darkness, light; where there is sadness, joy. Grant that I may not so much seek to be consoled as to console; to be understood as to understand; to be loved as to love.',
-        'Señor, hazme un instrumento de tu paz: donde haya odio, siembre yo amor; donde haya ofensa, perdón; donde haya duda, fe; donde haya desesperación, esperanza; donde haya tinieblas, luz; donde haya tristeza, alegría. Concédeme que no busque tanto ser consolado como consolar; ser comprendido como comprender; ser amado como amar.',
-        'Senhor, fazei-me um instrumento de vossa paz: onde houver ódio, que eu leve o amor; onde houver ofensa, que eu leve o perdão; onde houver dúvida, que eu leve a fé; onde houver desespero, que eu leve a esperança; onde houver trevas, que eu leve a luz; onde houver tristeza, que eu leve a alegria. Fazei que eu procure mais consolar que ser consolado; compreender que ser compreendido; amar que ser amado.'
+        'Señor, hazme un instrumento de tu paz: donde haya odio, siembre yo amor; donde haya ofensa, perdón; donde haya discordia, unión; donde haya duda, fe; donde haya desesperación, esperanza; donde haya tinieblas, luz; donde haya tristeza, alegría. Concédeme que no busque tanto ser consolado como consolar; ser comprendido como comprender; ser amado como amar.',
+        'Senhor, fazei-me um instrumento de vossa paz: onde houver ódio, que eu leve o amor; onde houver ofensa, que eu leve o perdão; onde houver discórdia, que eu leve a união; onde houver dúvida, que eu leve a fé; onde houver desespero, que eu leve a esperança; onde houver trevas, que eu leve a luz; onde houver tristeza, que eu leve a alegria. Fazei que eu procure mais consolar que ser consolado; compreender que ser compreendido; amar que ser amado.'
       )
     },
     {
       id: 'set_aside',
-      title: getText('Set-Aside Prayer', 'Oración de Dejar a un Lado', 'Oração do Desapego Mental'),
-      sub: getText('Open mind and a fresh spiritual awakening', 'Mente abierta y despertar renovado', 'Mente aberta e renovado despertar'),
+      title: getText('Set-Aside Prayer', 'Oración de Dejar a un Lado', 'Oração do Desapego'),
+      sub: getText('Open mind and a fresh spiritual awakening', 'Mente abierta y despertar espiritual', 'Mente aberta e despertar espiritual'),
       fellowships: getText('Shared across workshops and sponsorship', 'Compartida en talleres y padrinazgo', 'Compartilhada em oficinas e apadrinhamento'),
       icon: BookOpen,
       text: getText(
         'Higher Power, please set aside everything that I think I know about myself, my disease, the 12 Steps, and You; that I may have an open mind and a completely new experience of all these things, and find truth and healing.',
-        'Poder Superior, por favor haz a un lado todo lo que creo saber sobre mí mismo, mi enfermedad, los 12 Pasos y sobre Ti; para que pueda tener una mente abierta y una experiencia completamente nueva de todas estas cosas, y encontrar la verdad y la sanación.',
-        'Poder Superior, por favor afasta tudo o que penso saber sobre mim mesmo, minha doença, os 12 Passos e sobre Ti; para que eu possa ter a mente aberta e uma experiência completamente nova de todas essas coisas, encontrando a verdade e a cura.'
+        'Poder Superior, por favor haz a un lado todo lo que creo saber sobre mí mismo, mi enfermedad, los 12 Pasos y sobre Ti; para que pueda tener una mente abierta y una experiencia completamente nueva de todas estas cosas, y encontrar la verdad y la recuperación.',
+        'Poder Superior, por favor afasta tudo o que penso saber sobre mim mesmo, minha doença, os 12 Passos e sobre Ti; para que eu possa ter a mente aberta e uma experiência completamente nova de todas essas coisas, encontrando a verdade e a recuperação.'
       )
     },
     {
       id: 'responsibility',
-      title: getText('Fellowship Responsibility', 'Responsabilidad de Hermandad', 'Responsabilidade da Irmandade'),
+      title: getText('Fellowship Responsibility', 'Declaración de Responsabilidad', 'Declaração de Responsabilidade'),
       sub: getText('Reaching out the hand of recovery', 'Extender la mano de la recuperación', 'Estender a mão da recuperação'),
       fellowships: getText('Universal Declaration of mutual support', 'Declaración universal de apoyo mutuo', 'Declaração universal de apoio mútuo'),
       icon: LifeBuoy,
       text: getText(
         'I am responsible. When anyone, anywhere, reaches out for help, I want the hand of recovery always to be there. And for that: I am responsible. May we walk together in honesty, humility, and loving fellowship, one day at a time.',
-        'Yo soy responsable. Cuando cualquiera, dondequiera, tienda su mano pidiendo ayuda, quiero que la mano de la recuperación esté siempre allí. Y por eso: yo soy responsable. Que caminemos juntos con honestidad, humildad y fraternidad, un día a la vez.',
-        'Eu sou responsável. Quando alguém, em qualquer lugar, estender a mão pedindo ajuda, quero que a mão da recuperação esteja sempre ali. E por isso: eu sou responsável. Que caminhemos juntos com honestidade, humildade e amor fraternal, um dia de cada vez.'
+        'Yo soy responsable... Cuando cualquiera, dondequiera, extienda su mano pidiendo ayuda, quiero que la mano de la recuperación esté siempre allí. Y por esto: yo soy responsable. Que caminemos juntos con honestidad, humildad y fraternidad, un día a la vez.',
+        'Eu sou responsável... Quando qualquer um, seja onde for, estender a mão pedindo ajuda, quero que a mão da recuperação esteja sempre ali. E por isto: eu sou responsável. Que caminhemos juntos com honestidade, humildade e fraternidade, um dia de cada vez.'
       )
     }
   ];
@@ -495,26 +495,17 @@ export const MeditationView: React.FC = () => {
 
         {/* 2-per-row grid */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          {prompts.map((p, idx) => {
+          {prompts.map((p) => {
             const PromptIcon = p.icon;
-            const isLast = idx === prompts.length - 1;
             return (
               <div
                 key={p.id}
                 onClick={() => setSelectedPrompt(p)}
-                className={`rounded-2xl p-3.5 sm:p-4 border transition-all cursor-pointer shadow-none flex flex-col justify-between gap-2.5 group ${
-                  isLast
-                    ? 'border-black/10 bg-white/40 hover:bg-black/5'
-                    : 'bg-white border-black/10 hover:border-black/30'
-                }`}
+                className="rounded-2xl p-3.5 sm:p-4 border transition-all cursor-pointer shadow-none flex flex-col justify-between gap-2.5 group bg-white border-black/10 hover:border-black/30"
               >
                 {/* Title in-line with the small unique icon, even if title wraps into 2 rows */}
                 <div className="flex items-start gap-2 sm:gap-2.5">
-                  <div
-                    className={`w-7 h-7 rounded-lg border border-black/10 flex items-center justify-center text-black shrink-0 mt-0.5 transition-colors ${
-                      isLast ? 'bg-[#E5E1DB]/60' : 'bg-[#E5E1DB]/80 group-hover:bg-[#E5E1DB]'
-                    }`}
-                  >
+                  <div className="w-7 h-7 rounded-lg border border-black/10 flex items-center justify-center text-black shrink-0 mt-0.5 transition-colors bg-[#E5E1DB]/80 group-hover:bg-[#E5E1DB]">
                     <PromptIcon className="w-3.5 h-3.5 stroke-[2]" />
                   </div>
                   <h4 className="font-serif text-xs sm:text-sm font-semibold text-[#111111] leading-snug break-words">
@@ -552,7 +543,7 @@ export const MeditationView: React.FC = () => {
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {prayers.map((prayer, idx) => {
             const PrayerIcon = prayer.icon;
-            const isLast = idx === prayers.length - 1;
+            const isBottomTile = prayer.id === 'set_aside' || prayer.id === 'responsibility' || idx >= prayers.length - 2;
             return (
               <div
                 key={prayer.id}
@@ -562,7 +553,7 @@ export const MeditationView: React.FC = () => {
                   setSavedPrayerToast(false);
                 }}
                 className={`rounded-2xl p-3.5 sm:p-4 border transition-all cursor-pointer shadow-none flex flex-col justify-between gap-2.5 group ${
-                  isLast
+                  isBottomTile
                     ? 'border-black/10 bg-white/40 hover:bg-black/5'
                     : 'bg-white border-black/10 hover:border-black/30'
                 }`}
@@ -571,7 +562,7 @@ export const MeditationView: React.FC = () => {
                 <div className="flex items-start gap-2 sm:gap-2.5">
                   <div
                     className={`w-7 h-7 rounded-lg border border-black/10 flex items-center justify-center text-black shrink-0 mt-0.5 transition-colors ${
-                      isLast ? 'bg-[#E5E1DB]/60' : 'bg-[#E5E1DB]/80 group-hover:bg-[#E5E1DB]'
+                      isBottomTile ? 'bg-[#E5E1DB]/60' : 'bg-[#E5E1DB]/80 group-hover:bg-[#E5E1DB]'
                     }`}
                   >
                     <PrayerIcon className="w-3.5 h-3.5 stroke-[2]" />

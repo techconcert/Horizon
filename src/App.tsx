@@ -14,6 +14,7 @@ import { BreathingView } from './components/BreathingView';
 import { ToolsView } from './components/ToolsView';
 import { LessonsView } from './components/LessonsView';
 import { ProfileView } from './components/ProfileView';
+import { AdminConsoleView } from './components/AdminConsoleView';
 import { Shield, Lock, Fingerprint, RefreshCw, User, HeartHandshake, X, Phone, Video } from 'lucide-react';
 
 import { OnboardingView } from './components/OnboardingView';
@@ -434,6 +435,32 @@ const SanctuaryContent: React.FC = () => {
 };
 
 export default function App() {
+  const [isAdminRoute, setIsAdminRoute] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const hash = window.location.hash.toLowerCase();
+    const search = window.location.search.toLowerCase();
+    return hash === '#admin' || hash === '#/admin' || search.includes('admin=true');
+  });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.toLowerCase();
+      const search = window.location.search.toLowerCase();
+      setIsAdminRoute(hash === '#admin' || hash === '#/admin' || search.includes('admin=true'));
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handleHashChange);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', handleHashChange);
+    };
+  }, []);
+
+  if (isAdminRoute) {
+    return <AdminConsoleView />;
+  }
+
   return (
     <SanctuaryProvider>
       <SanctuaryContent />
