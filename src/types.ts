@@ -72,6 +72,20 @@ export interface BrotherhoodEntry {
   entryDate: string; // YYYY-MM-DD
 }
 
+export type DailyActivityKey = 'justForToday' | 'checkIn' | 'meditation' | 'breathing' | 'lesson';
+
+export interface DailyActivityProgress {
+  justForToday?: boolean;
+  checkIn?: boolean;
+  meditation?: boolean;
+  breathing?: boolean;
+  lesson?: boolean;
+}
+
+export interface DailyActivitiesMap {
+  [dateStr: string]: DailyActivityProgress;
+}
+
 export interface SanctuaryState {
   sobrietyStartDate: string; // ISO string
   reflections: Reflection[];
@@ -91,4 +105,5 @@ export interface SanctuaryState {
   syncCode?: string;
   lastCloudSync?: string | null;
   brotherhoods?: BrotherhoodEntry[];
+  dailyActivities?: DailyActivitiesMap;
 }

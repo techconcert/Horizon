@@ -10,7 +10,8 @@ import {
   Volume2,
   Heart,
   Info,
-  X
+  X,
+  RotateCcw
 } from 'lucide-react';
 
 interface BreathingPattern {
@@ -165,7 +166,7 @@ const PHASE_STYLES: Record<'Inhale' | 'Hold' | 'Exhale' | 'Rest', PhaseStyle> = 
 };
 
 export const BreathingView: React.FC = () => {
-  const { state, getTranslation, addReflection } = useSanctuary();
+  const { state, getTranslation, addReflection, recordDailyActivity } = useSanctuary();
 
   const getText = (en: string, es: string, pt: string) => {
     if (state.language === 'English') return en;
@@ -313,6 +314,14 @@ export const BreathingView: React.FC = () => {
     }
   };
 
+  const getDefaultSessionSeconds = (pattern: BreathingPattern) => {
+    return pattern.name.includes('Box') 
+      ? 300 
+      : (pattern.name.includes('Relaxing') || pattern.name.includes('4-7-8'))
+      ? 180 
+      : 600;
+  };
+
   // Breathing Coach State
   const [selectedBreathing, setSelectedBreathing] = useState<BreathingPattern>(BREATHING_TECHNIQUES[0]);
   const [infoTech, setInfoTech] = useState<BreathingPattern | null>(null);
@@ -321,7 +330,12 @@ export const BreathingView: React.FC = () => {
   const [breathingSecondsLeft, setBreathingSecondsLeft] = useState<number>(4);
   const [breathingSessionTimeLeft, setBreathingSessionTimeLeft] = useState<number>(300);
   const [breathingProgress, setBreathingProgress] = useState<number>(0);
+  
   const breathingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const phaseElapsedMsRef = useRef<number>(0);
+  const phaseDurationRef = useRef<number>(BREATHING_TECHNIQUES[0].inhale);
+  const sessionTimeLeftMsRef = useRef<number>(300 * 1000);
+  const currentPhaseRef = useRef<'Inhale' | 'Hold' | 'Exhale' | 'Rest'>('Inhale');
 
   // Sound chime helper
   const playBreathingChime = () => {
@@ -351,43 +365,50 @@ export const BreathingView: React.FC = () => {
     }
   };
 
-  // Breathing Coach cycle logic with sub-second interval for smooth scaling
+  const handleResetBreathing = () => {
+    if (breathingTimerRef.current) {
+      clearInterval(breathingTimerRef.current);
+      breathingTimerRef.current = null;
+    }
+    setIsBreathingRunning(false);
+    setBreathingPhase('Inhale');
+    currentPhaseRef.current = 'Inhale';
+    setBreathingSecondsLeft(selectedBreathing.inhale);
+    setBreathingProgress(0);
+    phaseElapsedMsRef.current = 0;
+    phaseDurationRef.current = selectedBreathing.inhale;
+    const defaultSecs = getDefaultSessionSeconds(selectedBreathing);
+    setBreathingSessionTimeLeft(defaultSecs);
+    sessionTimeLeftMsRef.current = defaultSecs * 1000;
+  };
+
+  // Breathing Coach cycle logic with sub-second interval for smooth scaling and pausing
   useEffect(() => {
     if (isBreathingRunning) {
-      const durationSeconds = selectedBreathing.name.includes('Box') 
-        ? 300 
-        : (selectedBreathing.name.includes('Relaxing') || selectedBreathing.name.includes('4-7-8'))
-        ? 180 
-        : 600;
-
-      setBreathingSecondsLeft(selectedBreathing.inhale);
-      setBreathingPhase('Inhale');
-      setBreathingProgress(0);
-      setBreathingSessionTimeLeft(durationSeconds);
-
-      // Trigger initial breathing feedback
-      triggerPhaseFeedback('Inhale');
-
-      let currentPhase: 'Inhale' | 'Hold' | 'Exhale' | 'Rest' = 'Inhale';
-      let phaseDuration = selectedBreathing.inhale;
-      let phaseElapsedMs = 0;
-      let sessionTimeLeftMs = durationSeconds * 1000;
+      // If we are starting freshly from 0 elapsed time, trigger initial feedback
+      if (phaseElapsedMsRef.current === 0 && sessionTimeLeftMsRef.current === getDefaultSessionSeconds(selectedBreathing) * 1000) {
+        triggerPhaseFeedback(currentPhaseRef.current);
+      }
 
       breathingTimerRef.current = setInterval(() => {
-        phaseElapsedMs += 100;
-        sessionTimeLeftMs -= 100;
+        phaseElapsedMsRef.current += 100;
+        sessionTimeLeftMsRef.current -= 100;
 
         // Session timer calculation
-        const currentSessionSecs = Math.max(0, Math.ceil(sessionTimeLeftMs / 1000));
+        const currentSessionSecs = Math.max(0, Math.ceil(sessionTimeLeftMsRef.current / 1000));
         setBreathingSessionTimeLeft(currentSessionSecs);
 
         // Check overall completion
-        if (sessionTimeLeftMs <= 0) {
+        if (sessionTimeLeftMsRef.current <= 0) {
           setIsBreathingRunning(false);
-          if (breathingTimerRef.current) clearInterval(breathingTimerRef.current);
+          if (breathingTimerRef.current) {
+            clearInterval(breathingTimerRef.current);
+            breathingTimerRef.current = null;
+          }
           playBreathingChime();
+          recordDailyActivity('breathing', true);
           addReflection(
-            getText('Breathing Exercise Complete', 'Ejercicio de respiración completado', 'Exercício de respiración concluído'),
+            getText('Breathing Exercise Complete', 'Ejercicio de respiración completado', 'Exercício de respiração concluído'),
             getText(
               `Completed a centering ${getTranslatedBreathing(selectedBreathing).name} session. Synchronized body and mind with deliberate breathing patterns.`,
               `Completé una sesión centradora de ${getTranslatedBreathing(selectedBreathing).name}. Sincronicé mi cuerpo y mente con mi respiración.`,
@@ -395,88 +416,99 @@ export const BreathingView: React.FC = () => {
             ),
             ['Calm', 'Peaceful', 'Content']
           );
-          alert(getText('Your breathing exercise session is complete. Feel the stillness.', 'Tu ejercicio de respiración ha terminado. Siente la quietud.', 'Seu exercício de respiração acabou. Sinta a calma.'));
+          handleResetBreathing();
           return;
         }
 
         // Calculate visual progress fraction (from 0 to 1) for smooth scale
-        const progress = Math.min(1, phaseElapsedMs / (phaseDuration * 1000));
+        const curDuration = phaseDurationRef.current;
+        const progress = Math.min(1, phaseElapsedMsRef.current / (curDuration * 1000));
         setBreathingProgress(progress);
 
         // Seconds remaining in current phase
-        const secondsLeft = Math.max(0, Math.ceil(phaseDuration - (phaseElapsedMs / 1000)));
+        const secondsLeft = Math.max(0, Math.ceil(curDuration - (phaseElapsedMsRef.current / 1000)));
         setBreathingSecondsLeft(secondsLeft);
 
         // Transition to next phase upon completion
-        if (phaseElapsedMs >= phaseDuration * 1000) {
-          phaseElapsedMs = 0;
+        if (phaseElapsedMsRef.current >= curDuration * 1000) {
+          phaseElapsedMsRef.current = 0;
           setBreathingProgress(0);
 
-          if (currentPhase === 'Inhale') {
+          let nextPhase: 'Inhale' | 'Hold' | 'Exhale' | 'Rest' = 'Inhale';
+          let nextPhaseDuration = selectedBreathing.inhale;
+
+          if (currentPhaseRef.current === 'Inhale') {
             if (selectedBreathing.hold1 > 0) {
-              currentPhase = 'Hold';
-              phaseDuration = selectedBreathing.hold1;
+              nextPhase = 'Hold';
+              nextPhaseDuration = selectedBreathing.hold1;
             } else {
-              currentPhase = 'Exhale';
-              phaseDuration = selectedBreathing.exhale;
+              nextPhase = 'Exhale';
+              nextPhaseDuration = selectedBreathing.exhale;
             }
-          } else if (currentPhase === 'Hold') {
-            currentPhase = 'Exhale';
-            phaseDuration = selectedBreathing.exhale;
-          } else if (currentPhase === 'Exhale') {
+          } else if (currentPhaseRef.current === 'Hold') {
+            nextPhase = 'Exhale';
+            nextPhaseDuration = selectedBreathing.exhale;
+          } else if (currentPhaseRef.current === 'Exhale') {
             if (selectedBreathing.hold2 > 0) {
-              currentPhase = 'Rest';
-              phaseDuration = selectedBreathing.hold2;
+              nextPhase = 'Rest';
+              nextPhaseDuration = selectedBreathing.hold2;
             } else {
-              currentPhase = 'Inhale';
-              phaseDuration = selectedBreathing.inhale;
+              nextPhase = 'Inhale';
+              nextPhaseDuration = selectedBreathing.inhale;
             }
-          } else if (currentPhase === 'Rest') {
-            currentPhase = 'Inhale';
-            phaseDuration = selectedBreathing.inhale;
+          } else if (currentPhaseRef.current === 'Rest') {
+            nextPhase = 'Inhale';
+            nextPhaseDuration = selectedBreathing.inhale;
           }
 
-          setBreathingPhase(currentPhase);
-          setBreathingSecondsLeft(phaseDuration);
+          currentPhaseRef.current = nextPhase;
+          phaseDurationRef.current = nextPhaseDuration;
+          setBreathingPhase(nextPhase);
+          setBreathingSecondsLeft(nextPhaseDuration);
 
           // Trigger transition feedback
-          triggerPhaseFeedback(currentPhase);
+          triggerPhaseFeedback(nextPhase);
         }
       }, 100);
     } else {
-      if (breathingTimerRef.current) clearInterval(breathingTimerRef.current);
-      setBreathingPhase('Inhale');
-      setBreathingSecondsLeft(selectedBreathing.inhale);
-      setBreathingProgress(0);
-      const defaultSeconds = selectedBreathing.name.includes('Box') 
-        ? 300 
-        : (selectedBreathing.name.includes('Relaxing') || selectedBreathing.name.includes('4-7-8'))
-        ? 180 
-        : 600;
-      setBreathingSessionTimeLeft(defaultSeconds);
+      // Stopped / Paused: simply clear the running timer without resetting state
+      if (breathingTimerRef.current) {
+        clearInterval(breathingTimerRef.current);
+        breathingTimerRef.current = null;
+      }
     }
 
     return () => {
-      if (breathingTimerRef.current) clearInterval(breathingTimerRef.current);
+      if (breathingTimerRef.current) {
+        clearInterval(breathingTimerRef.current);
+        breathingTimerRef.current = null;
+      }
     };
   }, [isBreathingRunning, selectedBreathing, state.language]);
 
   const handleBreathingSelect = (tech: BreathingPattern) => {
     setSelectedBreathing(tech);
+    if (breathingTimerRef.current) {
+      clearInterval(breathingTimerRef.current);
+      breathingTimerRef.current = null;
+    }
     setIsBreathingRunning(false);
-    setBreathingSecondsLeft(tech.inhale);
     setBreathingPhase('Inhale');
+    currentPhaseRef.current = 'Inhale';
+    setBreathingSecondsLeft(tech.inhale);
     setBreathingProgress(0);
-    const secs = tech.name.includes('Box') 
-      ? 300 
-      : (tech.name.includes('Relaxing') || tech.name.includes('4-7-8')) 
-      ? 180 
-      : 600;
+    phaseElapsedMsRef.current = 0;
+    phaseDurationRef.current = tech.inhale;
+    const secs = getDefaultSessionSeconds(tech);
     setBreathingSessionTimeLeft(secs);
+    sessionTimeLeftMsRef.current = secs * 1000;
   };
 
+  const defaultDuration = getDefaultSessionSeconds(selectedBreathing);
+  const isSessionActive = isBreathingRunning || breathingSessionTimeLeft < defaultDuration || breathingProgress > 0;
+
   const getBreathingScale = () => {
-    if (!isBreathingRunning) return 1.0;
+    if (!isSessionActive) return 1.0;
     const minScale = 0.85;
     const maxScale = 1.25;
     const diff = maxScale - minScale;
@@ -509,7 +541,7 @@ export const BreathingView: React.FC = () => {
   const currentScale = getBreathingScale();
 
   const getWaterFillPercentage = () => {
-    if (!isBreathingRunning) return 0;
+    if (!isSessionActive) return 0;
     switch (breathingPhase) {
       case 'Inhale':
         return Math.min(100, Math.max(0, breathingProgress * 100));
@@ -525,7 +557,7 @@ export const BreathingView: React.FC = () => {
   };
 
   const waterFill = getWaterFillPercentage();
-  const currentPhaseHex = isBreathingRunning ? PHASE_STYLES[breathingPhase].hex : '#4A6B5D';
+  const currentPhaseHex = isSessionActive ? PHASE_STYLES[breathingPhase].hex : '#4A6B5D';
 
   return (
     <div className="flex flex-col gap-2">
@@ -603,36 +635,35 @@ export const BreathingView: React.FC = () => {
           })}
         </div>
 
-        {/* Combined Start/Stop and Countdown Duration Pill - placed immediately below 3 boxes with minimal whitespace */}
-        <div className="mt-1 mb-2 relative z-20">
+        {/* Combined Start/Stop and Countdown Duration Pill with dedicated Reset button */}
+        <div className="mt-1 mb-2 relative z-20 flex items-center justify-center gap-2">
           <button
+            type="button"
             onClick={() => {
               initAudioAndFeedback();
               setIsBreathingRunning(!isBreathingRunning);
             }}
             className={`cursor-pointer px-6 py-2.5 rounded-full font-sans text-xs font-bold tracking-widest uppercase transition-all duration-300 shadow-sm flex items-center gap-2 border touch-manipulation active:scale-95 ${
               isBreathingRunning
-                ? 'bg-red-800/90 hover:bg-red-700 text-white border-red-900/30'
+                ? 'bg-amber-900/90 hover:bg-amber-800 text-white border-amber-900/30'
                 : 'bg-black hover:bg-black/80 text-[#F8F5F2] border-black'
             }`}
           >
-            {isBreathingRunning ? (
-              <>
-                <span>{getTranslation('pause_session')}</span>
-                <span className="opacity-65">•</span>
-                <span className="font-mono text-[10px] font-normal tracking-normal text-[#F8F5F2]">
-                  {Math.floor(breathingSessionTimeLeft / 60)}:{String(breathingSessionTimeLeft % 60).padStart(2, '0')}
-                </span>
-              </>
-            ) : (
-              <>
-                <span>{getTranslation('start_session')}</span>
-                <span className="opacity-65">•</span>
-                <span className="font-mono text-[10px] font-normal tracking-normal text-[#F8F5F2]">
-                  {Math.floor(breathingSessionTimeLeft / 60)}:{String(breathingSessionTimeLeft % 60).padStart(2, '0')}
-                </span>
-              </>
-            )}
+            <span>{isBreathingRunning ? getText('Pause', 'Pausar', 'Pausar') : getText('Start', 'Iniciar', 'Iniciar')}</span>
+            <span className="opacity-65">•</span>
+            <span className="font-mono text-[10px] font-normal tracking-normal text-[#F8F5F2]">
+              {Math.floor(breathingSessionTimeLeft / 60)}:{String(breathingSessionTimeLeft % 60).padStart(2, '0')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResetBreathing}
+            title={getText('Reset exercise', 'Reiniciar ejercicio', 'Reiniciar exercício')}
+            aria-label={getText('Reset exercise', 'Reiniciar ejercicio', 'Reiniciar exercício')}
+            className="cursor-pointer w-9 h-9 rounded-full border border-black/15 bg-[#FAF8F5] hover:bg-black/5 flex items-center justify-center text-black/60 hover:text-black transition-colors shadow-xs active:scale-95 touch-manipulation"
+          >
+            <RotateCcw className="w-4 h-4 stroke-[2]" />
           </button>
         </div>
 
@@ -643,7 +674,7 @@ export const BreathingView: React.FC = () => {
             className="absolute w-56 h-56 rounded-full border border-black/10 pointer-events-none transition-opacity duration-500"
             style={{
               transform: 'scale(1.22)',
-              opacity: isBreathingRunning ? 0.25 : 0.1,
+              opacity: isSessionActive ? 0.25 : 0.1,
             }}
           />
 
@@ -652,9 +683,9 @@ export const BreathingView: React.FC = () => {
             className="relative z-10 w-48 h-48 sm:w-52 sm:h-52 rounded-full overflow-hidden flex flex-col items-center justify-center text-white border-[1.5px] pointer-events-none transition-all"
             style={{
               transform: `scale(${currentScale})`,
-              borderColor: isBreathingRunning ? PHASE_STYLES[breathingPhase].borderColor : 'rgba(0, 0, 0, 0.15)',
+              borderColor: isSessionActive ? PHASE_STYLES[breathingPhase].borderColor : 'rgba(0, 0, 0, 0.15)',
               backgroundColor: '#161918',
-              boxShadow: isBreathingRunning
+              boxShadow: isSessionActive
                 ? `0 10px 25px -4px rgba(0, 0, 0, 0.22), 0 0 0 1px ${PHASE_STYLES[breathingPhase].borderColor}33`
                 : '0 4px 16px -2px rgba(0, 0, 0, 0.12)',
               transition: 'transform 100ms linear, border-color 400ms ease, box-shadow 400ms ease',
@@ -706,15 +737,15 @@ export const BreathingView: React.FC = () => {
             {/* Center Phase and Timer Content */}
             <div className="relative z-20 flex flex-col items-center justify-center text-center px-4">
               <span className="font-serif text-xl sm:text-2xl font-normal mb-1.5 text-[#F8F5F2] tracking-wide text-center drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
-                {isBreathingRunning ? getTranslatedPhase(breathingPhase, state.language) : (getText('Breathing', 'Respirando', 'Respirando'))}
+                {isSessionActive ? getTranslatedPhase(breathingPhase, state.language) : (getText('Breathing', 'Respirando', 'Respirando'))}
               </span>
               
               <span className="font-sans text-[20px] sm:text-[22px] font-bold text-[#F8F5F2] select-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] tracking-tight">
-                {isBreathingRunning ? `${breathingSecondsLeft}s` : '•••'}
+                {isSessionActive ? `${breathingSecondsLeft}s` : '•••'}
               </span>
 
               <span className="font-sans text-[8.5px] sm:text-[9px] font-bold uppercase tracking-widest text-[#F8F5F2]/80 mt-1.5 text-center px-4 leading-normal max-w-[140px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
-                {isBreathingRunning
+                {isSessionActive
                   ? getPhaseInstruction(breathingPhase, state.language)
                   : getTranslation('find_center')}
               </span>

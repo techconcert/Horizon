@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { TabType, MoodType, Reflection, Step, SubLesson, SanctuaryState, BrotherhoodEntry } from '../types';
+import { TabType, MoodType, Reflection, Step, SubLesson, SanctuaryState, BrotherhoodEntry, DailyActivityKey, DailyActivitiesMap } from '../types';
 import { INITIAL_STEPS } from '../lessons';
 import { 
   getOrCreateSyncCode, 
@@ -16,8 +16,10 @@ import {
   isCloudQuotaExceeded 
 } from '../services/cloudSync';
 import { detectDefaultLanguage } from '../utils/languageDetection';
+import { formatLocalDateToYMD, getDailyActivityStatus, DailyActivityStatusResult } from '../utils/dailyPractices';
 
-export { detectDefaultLanguage };
+export { detectDefaultLanguage, formatLocalDateToYMD, getDailyActivityStatus };
+export type { DailyActivityStatusResult };
 
 interface SanctuaryContextType {
   state: SanctuaryState;
@@ -27,6 +29,23 @@ interface SanctuaryContextType {
   addReflection: (title: string, content: string, moods: MoodType[]) => void;
   deleteReflection: (id: string) => void;
   toggleSoberCheckIn: () => void;
+  recordDailyActivity: (activity: DailyActivityKey, completed?: boolean, dateStr?: string) => void;
+  getDailyActivityStatus: (dateStr?: string) => {
+    justForToday: boolean;
+    checkIn: boolean;
+    meditation: boolean;
+    breathing: boolean;
+    lesson: boolean;
+    activities: {
+      justForToday: boolean;
+      checkIn: boolean;
+      meditation: boolean;
+      breathing: boolean;
+      lesson: boolean;
+    };
+    completedCount: number;
+    isGoalMet: boolean;
+  };
   setLanguage: (lang: 'English' | 'Español' | 'Português') => void;
   setBiometricLock: (enabled: boolean) => void;
   setSyncEnabled: (enabled: boolean) => void;
@@ -76,10 +95,10 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'menu_aria': { English: 'Menu', Español: 'Menú', Português: 'Menu' },
   'profile_aria': { English: 'User Profile', Español: 'Perfil de usuario', Português: 'Perfil do usuário' },
   'step_chip': { English: 'Step 10: Continue to take personal inventory', Español: 'Paso 10: Continuar haciendo el inventario personal', Português: 'Passo 10: Continuar a fazer o inventário pessoal' },
-  'mood_selection': { English: 'How are you feeling?', Español: '¿Cómo te sientes hoy?', Português: 'Como você está se sentindo?' },
-  'custom_mood': { English: 'Custom', Español: 'Otro', Português: 'Outro' },
+  'mood_selection': { English: 'How are you feeling?', Español: '¿Cómo te sientes hoy?', Português: 'Como você está se sentindo hoje?' },
+  'custom_mood': { English: 'Custom', Español: 'Personalizado', Português: 'Personalizado' },
   'daily_reflection': { English: 'Daily Reflection', Español: 'Reflexión diaria', Português: 'Reflexão diária' },
-  'reflection_placeholder': { English: "What's on your mind today? Write it down...", Español: '¿Qué tienes en mente hoy? Escribe lo que sientes...', Português: 'O que está passando pela sua cabeça hoje? Escreva aqui...' },
+  'reflection_placeholder': { English: "What's on your mind today? Write it down...", Español: '¿Qué tienes en mente hoy? Escribe aquí...', Português: 'O que está passando pela sua mente hoje? Escreva aqui...' },
   'save_entry': { English: 'Save', Español: 'Guardar', Português: 'Salvar' },
   'sentiment_insights': { English: 'Sentiment Insights', Español: 'Análisis de tus emociones', Português: 'Análise das suas emoções' },
   'weekly': { English: 'Weekly', Español: 'Semanal', Português: 'Semanal' },
@@ -94,23 +113,23 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'lessons_tab': { English: 'Lessons', Español: 'Lecciones', Português: 'Lições' },
   'profile_tab': { English: 'Profile', Español: 'Perfil', Português: 'Perfil' },
   'you_are_here': { English: 'You are here.', Español: 'Estás aquí.', Português: 'Você está aqui.' },
-  'take_a_breath': { English: 'Take a breath. You are grounded in this moment.', Español: 'Respira profundo. Estás aquí y ahora.', Português: 'Respire fundo. Você está firme no agora.' },
+  'take_a_breath': { English: 'Take a breath. You are grounded in this moment.', Español: 'Respira profundo. Estás presente en este momento.', Português: 'Respire fundo. Você está presente neste momento.' },
   'time_grounded': { English: 'Time Grounded', Español: 'Tiempo en el camino', Português: 'Tempo no caminho' },
   'hours_aligned': { English: 'Hours aligned', Español: 'Horas alineadas', Português: 'Horas alinhadas' },
   'current_cycle': { English: 'Current Cycle', Español: 'Ciclo actual', Português: 'Ciclo atual' },
-  'focus_today': { English: 'Focus for Today', Español: 'Enfoque para hoy', Português: 'Foco de hoje' },
+  'focus_today': { English: 'Focus for Today', Español: 'Enfoque de hoy', Português: 'Foco de hoje' },
   'new_intention': { English: 'New Intention', Español: 'Nueva intención', Português: 'Nova intenção' },
   'morning_ritual': { English: 'Morning Ritual', Español: 'Ritual de la mañana', Português: 'Ritual matinal' },
   'breathwork_session': { English: 'Breathwork Session', Español: 'Sesión de respiración', Português: 'Sessão de respiração' },
-  'breathwork_desc': { English: '5 minutes to center your mind for the day ahead.', Español: '5 minutos para centrar tu mente para el día que te espera.', Português: '5 minutinhos para centrar a mente para o dia.' },
+  'breathwork_desc': { English: '5 minutes to center your mind for the day ahead.', Español: '5 minutos para centrar tu mente para el día que comienza.', Português: '5 minutos para centrar a mente para o seu dia.' },
   'begin_session': { English: 'Begin Session', Español: 'Empezar sesión', Português: 'Começar sessão' },
   'one_day': { English: '"One day at a time."', Español: '"Un día a la vez."', Português: '"Um dia de cada vez."' },
   'daily_check_in': { English: 'Daily Check-In', Español: 'Registro diario', Português: 'Check-in diário' },
-  'i_am_sober': { English: 'I am sober today.', Español: 'Hoy estoy sobrio.', Português: 'Hoje eu estou limpo.' },
-  'reach_out': { English: 'Reach Out', Español: 'Hablar con alguien', Português: 'Falar com alguém' },
-  'mood_balance': { English: 'Mood Balance', Español: 'Balance de emociones', Português: 'Balanço de emoções' },
+  'i_am_sober': { English: 'I am sober today.', Español: 'Hoy estoy limpio.', Português: 'Hoje estou limpo.' },
+  'reach_out': { English: 'Reach Out', Español: 'Pedir apoyo', Português: 'Pedir apoio' },
+  'mood_balance': { English: 'Mood Balance', Español: 'Balance emocional', Português: 'Balanço emocional' },
   'last_7_days': { English: 'Last 7 Days', Español: 'Últimos 7 días', Português: 'Últimos 7 dias' },
-  'neutral': { English: 'Neutral', Español: 'Neutral', Português: 'Neutro' },
+  'neutral': { English: 'Neutral', Español: 'Neutro', Português: 'Neutro' },
   'mood_distribution': { English: 'Mood Distribution', Español: 'Distribución de emociones', Português: 'Distribuição de emoções' },
   'insights_title': { English: 'Insights', Español: 'Perspectivas', Português: 'Insights' },
   'daily_meditation': { English: 'Daily Meditation & Prayer', Español: 'Meditación y oración diaria', Português: 'Meditação e oração diária' },
@@ -143,7 +162,9 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'hold': { English: 'Hold', Español: 'Sostén', Português: 'Segura' },
   'exhale': { English: 'Exhale', Español: 'Exhala', Português: 'Expira' },
   'seconds': { English: 'seconds', Español: 'segundos', Português: 'segundos' },
-  'start_session': { English: 'Start Session', Español: 'Empezar sesión', Português: 'Iniciar sessão' },
+  'start': { English: 'Start', Español: 'Iniciar', Português: 'Iniciar' },
+  'pause': { English: 'Pause', Español: 'Pausar', Português: 'Pausar' },
+  'start_session': { English: 'Start Session', Español: 'Iniciar sesión', Português: 'Iniciar sessão' },
   'pause_session': { English: 'Pause Session', Español: 'Pausar sesión', Português: 'Pausar sessão' },
   'pause_section': { English: 'Pause Session', Español: 'Pausar sesión', Português: 'Pausar sessão' },
   'stop_session': { English: 'Stop Session', Español: 'Detener sesión', Português: 'Parar sessão' },
@@ -172,7 +193,7 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'understanding_core': { English: 'Understanding the Core', Español: 'Entendiendo la base', Português: 'Entendendo a base' },
   'understanding_sub': { English: 'Admitting powerlessness is not a sign of weakness, but the foundational step towards reclaiming your authentic self.', Español: 'Admitir la falta de poder no es un signo de debilidad, sino el paso fundamental para recuperar tu ser auténtico.', Português: 'Admitir a falta de controle não é um sinal de fraqueza, mas sim o primeiro passo para resgatar quem você realmente é.' },
   'lessons_complete': { English: 'LESSONS COMPLETE', Español: 'LECCIONES COMPLETADAS', Português: 'LIÇÕES CONCLUÍDAS' },
-  'read_to_me': { English: 'Read to Me', Español: 'Léemelo', Português: 'Ler para mim' },
+  'read_to_me': { English: 'Read to Me', Español: 'Leer en voz alta', Português: 'Ler em voz alta' },
   'mark_complete': { English: 'Mark Complete', Español: 'Marcar como completado', Português: 'Marcar como concluído' },
   're_read': { English: 'Completed', Español: 'Completado', Português: 'Concluído' },
   'ai_limit_reached': { English: 'Daily Limit Reached', Español: 'Límite diario alcanzado', Português: 'Limite diário atingido' },
@@ -203,6 +224,14 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   },
   'all_steps': { English: 'All Steps', Español: 'Todos los Pasos', Português: 'Todos os Passos' },
   'progress': { English: 'Progress', Español: 'Progreso', Português: 'Progresso' },
+  'start_or_pause': { English: 'Start / Pause', Español: 'Iniciar / Pausar', Português: 'Iniciar / Pausar' },
+  'daily_goal_met': { English: 'Daily goal met! ✓', Español: '¡Meta diaria cumplida! ✓', Português: 'Meta diária alcançada! ✓' },
+  'todays_progress': { English: "Today's Progress", Español: 'Progreso de hoy', Português: 'Progresso de hoje' },
+  'just_for_today': { English: 'Just for Today', Español: 'Solo por hoy', Português: 'Só por hoje' },
+  'clean_slate': { English: 'Clean Slate', Español: 'Nuevo comienzo', Português: 'Recomeço' },
+  'cancel': { English: 'Cancel', Español: 'Cancelar', Português: 'Cancelar' },
+  'done': { English: 'Done', Español: 'Listo', Português: 'Concluído' },
+  'affirm': { English: 'Affirm', Español: 'Afirmar', Português: 'Afirmar' },
 };
 
 export const parseSobrietyDateSafely = (startDateStr?: string | null): Date | null => {
@@ -224,13 +253,6 @@ export const parseSobrietyDateSafely = (startDateStr?: string | null): Date | nu
   const parsed = new Date(startDateStr);
   if (isNaN(parsed.getTime())) return null;
   return parsed;
-};
-
-export const formatLocalDateToYMD = (date: Date = new Date()): string => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
 };
 
 export const addYearsClamped = (baseDate: Date, yearsToAdd: number): Date => {
@@ -519,6 +541,18 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return [];
   });
 
+  const [dailyActivities, setDailyActivities] = useState<DailyActivitiesMap>(() => {
+    const saved = localStorage.getItem('dailyActivities');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  });
+
   const [syncCode, setSyncCode] = useState<string>(() => getOrCreateSyncCode());
   const [lastCloudSync, setLastCloudSync] = useState<string | null>(() => {
     return localStorage.getItem('horizon_last_cloud_sync') || null;
@@ -651,6 +685,10 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     localStorage.setItem('brotherhoods', JSON.stringify(brotherhoods));
   }, [brotherhoods]);
 
+  useEffect(() => {
+    localStorage.setItem('dailyActivities', JSON.stringify(dailyActivities));
+  }, [dailyActivities]);
+
   // Setters
   const setActiveTab = (tab: TabType) => setActiveTabState(tab);
   const setCurrentLessonId = (id: string | null) => setCurrentLessonIdState(id);
@@ -671,6 +709,20 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const setSponsorNumber = (val: string) => setSponsorNumberState(val);
   const setSupportLink = (val: string) => setSupportLinkState(val);
   const setOnboarded = (val: boolean) => setOnboardedState(val);
+
+  const recordDailyActivity = (activity: DailyActivityKey, completed: boolean = true, dateStr?: string) => {
+    const targetDate = dateStr || formatLocalDateToYMD();
+    setDailyActivities(prev => {
+      const dayRecord = prev[targetDate] || {};
+      return {
+        ...prev,
+        [targetDate]: {
+          ...dayRecord,
+          [activity]: completed,
+        },
+      };
+    });
+  };
 
   const addBrotherhood = (brotherhood: string, entryDate: string) => {
     const newEntry: BrotherhoodEntry = {
@@ -694,6 +746,18 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       moods,
     };
     setReflections(prev => [newRef, ...prev]);
+
+    // Automatically record corresponding daily activity
+    const lower = (title || '').toLowerCase();
+    if (lower.includes('meditation') || lower.includes('meditación') || lower.includes('meditação')) {
+      recordDailyActivity('meditation', true);
+    } else if (lower.includes('breathing') || lower.includes('respiración') || lower.includes('respiração')) {
+      recordDailyActivity('breathing', true);
+    } else if (lower.includes('lesson') || lower.includes('lección') || lower.includes('lição')) {
+      recordDailyActivity('lesson', true);
+    } else {
+      recordDailyActivity('checkIn', true);
+    }
   };
 
   const deleteReflection = (id: string) => {
@@ -705,10 +769,12 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (isCurrentlyActive) {
       setLastSoberCheckInTime(null);
       setSoberCheckedInToday(false);
+      recordDailyActivity('justForToday', false);
     } else {
       const nowStr = new Date().toISOString();
       setLastSoberCheckInTime(nowStr);
       setSoberCheckedInToday(true);
+      recordDailyActivity('justForToday', true);
     }
   };
 
@@ -719,6 +785,9 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const updateSubLessonStatus = (stepId: string, subLessonId: string, status: 'READ' | 'IN PROGRESS' | 'UNREAD') => {
+    if (status === 'READ') {
+      recordDailyActivity('lesson', true);
+    }
     setSteps(prevSteps => {
       const updated = prevSteps.map(step => {
         if (step.id !== stepId) return step;
@@ -968,6 +1037,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (data.supportLink !== undefined) setSupportLinkState(data.supportLink);
       if (data.lastSoberCheckInTime) setLastSoberCheckInTime(data.lastSoberCheckInTime);
       if (data.brotherhoods) setBrotherhoods(data.brotherhoods);
+      if (data.dailyActivities) setDailyActivities(data.dailyActivities);
 
       const normCode = normalizeSyncCode(code);
       setSyncCode(normCode);
@@ -994,7 +1064,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [sobrietyStartDate, reflections, steps, customMoods, lastSoberCheckInTime, onboarded, syncEnabled, brotherhoods]);
+  }, [sobrietyStartDate, reflections, steps, customMoods, lastSoberCheckInTime, onboarded, syncEnabled, brotherhoods, dailyActivities]);
 
   // Initial cloud restore listener if #sync= was in URL
   useEffect(() => {
@@ -1032,7 +1102,8 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           onboarded,
           syncCode,
           lastCloudSync,
-          brotherhoods
+          brotherhoods,
+          dailyActivities
         },
         setActiveTab,
         setCurrentLessonId,
@@ -1040,6 +1111,31 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addReflection,
         deleteReflection,
         toggleSoberCheckIn,
+        recordDailyActivity,
+        getDailyActivityStatus: (dateStr?: string) => {
+          const currentState: SanctuaryState = {
+            sobrietyStartDate,
+            reflections,
+            activeTab,
+            currentLessonId,
+            soberCheckedInToday,
+            biometricLock,
+            language,
+            syncEnabled,
+            customMoods,
+            lastSoberCheckInTime,
+            supportNumber,
+            sponsorName,
+            sponsorNumber,
+            supportLink,
+            onboarded,
+            syncCode,
+            lastCloudSync,
+            brotherhoods,
+            dailyActivities
+          };
+          return getDailyActivityStatus(currentState, dateStr);
+        },
         setLanguage,
         setBiometricLock,
         setSyncEnabled,

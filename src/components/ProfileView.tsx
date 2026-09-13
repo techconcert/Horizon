@@ -298,7 +298,7 @@ export const ProfileView: React.FC = () => {
       {/* Profile Settings Bento Column */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto w-full">
         {/* Sobriety Reset/Update Settings */}
-        <article className="bg-white rounded-3xl p-4 border border-black/10 shadow-none flex flex-col justify-between overflow-hidden">
+        <article className="bg-white rounded-3xl p-4 border border-black/10 shadow-none flex flex-col justify-between overflow-hidden md:col-span-2">
           <div>
             <div className="flex items-center gap-2 text-[#143224] mb-2">
               <Calendar className="w-4 h-4 shrink-0" />
@@ -344,40 +344,6 @@ export const ProfileView: React.FC = () => {
           </div>
         </article>
 
-        {/* Bilingual Language Selection */}
-        <article className="bg-white rounded-3xl p-4 border border-black/10 shadow-none flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-[#143224] mb-2">
-              <Globe className="w-4 h-4" />
-              <h3 className="font-sans text-[10px] font-bold uppercase tracking-widest">
-                {getTranslation('language')}
-              </h3>
-            </div>
-            <p className="font-sans text-xs text-black/60 leading-relaxed mb-3">
-              {state.language === 'English'
-                ? 'Select your primary language preference.'
-                : state.language === 'Español'
-                ? 'Selecciona tu preferencia de idioma.'
-                : 'Selecione a sua preferência de idioma principal.'}
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between bg-[#F8F5F2] p-3 rounded-2xl border border-black/10">
-            <span className="font-sans text-xs font-bold text-black/75">
-              {getTranslation('language')}
-            </span>
-            <select
-              value={state.language}
-              onChange={e => setLanguage(e.target.value as any)}
-              className="bg-white border border-black/15 rounded-full px-3 py-1.5 text-xs font-bold text-[#111111] focus:outline-none cursor-pointer"
-            >
-              <option value="English">English</option>
-              <option value="Português">Português</option>
-              <option value="Español">Español</option>
-            </select>
-          </div>
-        </article>
-
         {/* Brotherhood & Fellowships Selection Card (Unlimited list with entrance date / 'ingresso') */}
         <article className="bg-white rounded-3xl p-4 md:p-5 border border-black/10 shadow-none flex flex-col justify-between md:col-span-2">
           <div>
@@ -399,6 +365,54 @@ export const ProfileView: React.FC = () => {
                 ? 'Selecciona una confraternidad y registra tu fecha de ingreso. Puedes registrar múltiples confraternidades.'
                 : 'Select a fellowship and record your entrance date. You can track multiple fellowships.'}
             </p>
+
+            {/* Fellowship List (Placed above the Add Form) */}
+            {state.brotherhoods && state.brotherhoods.length > 0 && (
+              <div className="flex flex-col gap-2.5 mb-3.5">
+                {state.brotherhoods.map((entry) => {
+                  const timeInFellowship = calculateTimeGrounded(entry.entryDate);
+                  const formattedTime = formatAccumulatedTime(timeInFellowship, state.language);
+                  const displayDate = formatShortDate(entry.entryDate, state.language);
+                  const localizedAbbreviation = translateFellowship(entry.brotherhood, state.language);
+
+                  return (
+                    <div
+                      key={entry.id}
+                      className="bg-[#F8F5F2] border border-black/10 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-2xs"
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <span className="font-mono text-[11px] sm:text-xs font-black tracking-wider bg-black text-white w-16 sm:w-20 py-1.5 rounded-xl shrink-0 uppercase shadow-2xs text-center flex items-center justify-center whitespace-nowrap">
+                          {localizedAbbreviation}
+                        </span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-sans text-[10px] font-bold text-black/50 uppercase tracking-wider truncate">
+                            {state.language === 'Português'
+                              ? 'Ingresso'
+                              : state.language === 'Español'
+                              ? 'Ingreso'
+                              : 'Entry'}{' '}
+                            <span className="text-black/80 font-semibold">{displayDate}</span>
+                          </span>
+                          <span className="font-serif text-sm text-[#143224] font-semibold mt-0.5 truncate">
+                            {formattedTime}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => deleteBrotherhood(entry.id)}
+                        className="p-2 text-black/35 hover:text-red-600 hover:bg-black/5 rounded-xl transition-colors cursor-pointer shrink-0"
+                        title={state.language === 'Português' ? 'Remover irmandade' : state.language === 'Español' ? 'Eliminar confraternidad' : 'Remove fellowship'}
+                        aria-label={state.language === 'Português' ? 'Remover irmandade' : state.language === 'Español' ? 'Eliminar confraternidad' : 'Remove fellowship'}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Brotherhood Add Form */}
             <form onSubmit={handleAddBrotherhood} className="bg-[#FAF8F5] border border-black/10 rounded-2xl p-3 sm:p-4">
@@ -507,64 +521,40 @@ export const ProfileView: React.FC = () => {
                 </div>
               )}
             </form>
+          </div>
+        </article>
 
-            {/* Fellowship List (No limit) */}
-            {state.brotherhoods && state.brotherhoods.length > 0 ? (
-              <div className="flex flex-col gap-2.5 mt-4">
-                {state.brotherhoods.map((entry) => {
-                  const timeInFellowship = calculateTimeGrounded(entry.entryDate);
-                  const formattedTime = formatAccumulatedTime(timeInFellowship, state.language);
-                  const displayDate = formatShortDate(entry.entryDate, state.language);
-                  const localizedAbbreviation = translateFellowship(entry.brotherhood, state.language);
+        {/* Bilingual Language Selection */}
+        <article className="bg-white rounded-3xl p-4 border border-black/10 shadow-none flex flex-col justify-between md:col-span-2">
+          <div>
+            <div className="flex items-center gap-2 text-[#143224] mb-2">
+              <Globe className="w-4 h-4" />
+              <h3 className="font-sans text-[10px] font-bold uppercase tracking-widest">
+                {getTranslation('language')}
+              </h3>
+            </div>
+            <p className="font-sans text-xs text-black/60 leading-relaxed mb-3">
+              {state.language === 'English'
+                ? 'Select your primary language preference.'
+                : state.language === 'Español'
+                ? 'Selecciona tu preferencia de idioma.'
+                : 'Selecione a sua preferência de idioma principal.'}
+            </p>
+          </div>
 
-                  return (
-                    <div
-                      key={entry.id}
-                      className="bg-[#F8F5F2] border border-black/10 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-2xs"
-                    >
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <span className="font-mono text-[11px] sm:text-xs font-black tracking-wider bg-black text-white w-16 sm:w-20 py-1.5 rounded-xl shrink-0 uppercase shadow-2xs text-center flex items-center justify-center whitespace-nowrap">
-                          {localizedAbbreviation}
-                        </span>
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-sans text-[10px] font-bold text-black/50 uppercase tracking-wider truncate">
-                            {state.language === 'Português'
-                              ? 'Data de ingresso:'
-                              : state.language === 'Español'
-                              ? 'Fecha de ingreso:'
-                              : 'Entry date:'}{' '}
-                            <span className="text-black/80 font-semibold">{displayDate}</span>
-                          </span>
-                          <span className="font-serif text-sm text-[#143224] font-semibold mt-0.5 truncate">
-                            {formattedTime}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => deleteBrotherhood(entry.id)}
-                        className="p-2 text-black/35 hover:text-red-600 hover:bg-black/5 rounded-xl transition-colors cursor-pointer shrink-0"
-                        title={state.language === 'Português' ? 'Remover irmandade' : state.language === 'Español' ? 'Eliminar confraternidad' : 'Remove fellowship'}
-                        aria-label={state.language === 'Português' ? 'Remover irmandade' : state.language === 'Español' ? 'Eliminar confraternidad' : 'Remove fellowship'}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="bg-[#FAF8F5] rounded-2xl p-3.5 text-center border border-dashed border-black/15 mt-3">
-                <p className="font-sans text-xs text-black/50">
-                  {state.language === 'Português'
-                    ? 'Nenhuma irmandade adicionada ainda. Selecione uma opção acima para registrar sua data de ingresso.'
-                    : state.language === 'Español'
-                    ? 'Aún no has agregado confraternidades. Selecciona una arriba para registrar tu fecha de ingreso.'
-                    : 'No fellowships added yet. Select a fellowship above to record your entrance date.'}
-                </p>
-              </div>
-            )}
+          <div className="flex items-center justify-between bg-[#F8F5F2] p-3 rounded-2xl border border-black/10">
+            <span className="font-sans text-xs font-bold text-black/75">
+              {getTranslation('language')}
+            </span>
+            <select
+              value={state.language}
+              onChange={e => setLanguage(e.target.value as any)}
+              className="bg-white border border-black/15 rounded-full px-3 py-1.5 text-xs font-bold text-[#111111] focus:outline-none cursor-pointer"
+            >
+              <option value="English">English</option>
+              <option value="Português">Português</option>
+              <option value="Español">Español</option>
+            </select>
           </div>
         </article>
 
@@ -792,7 +782,7 @@ export const ProfileView: React.FC = () => {
       {/* App License & Version Footer */}
       <footer className="text-center py-4 text-xs font-sans text-black/40 space-y-2">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-          <p className="font-medium text-black/50">Horizon v2.2.4</p>
+          <p className="font-medium text-black/50">Horizon v2.2.13</p>
           <span className="hidden sm:inline text-black/20">•</span>
           <button
             type="button"

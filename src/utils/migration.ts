@@ -25,6 +25,8 @@ const STORAGE_KEYS = [
   'sponsorName',
   'sponsorNumber',
   'supportLink',
+  'brotherhoods',
+  'dailyActivities',
   'onboarded',
   'aiUsage',
   'horizon_sync_code'

@@ -18,7 +18,12 @@ import {
   FileText,
   Calendar,
   ArrowDown,
-  RefreshCw
+  RefreshCw,
+  Wind,
+  BookOpen,
+  Sparkles,
+  X,
+  ChevronRight
 } from 'lucide-react';
 
 interface KeytagBadgeProps {
@@ -199,13 +204,19 @@ export const HomeView: React.FC = () => {
     setActiveTab,
     setSobrietyStartDate,
     toggleSoberCheckIn,
-    syncToCloud
+    syncToCloud,
+    getDailyActivityStatus,
+    recordDailyActivity
   } = useSanctuary();
   const getLangText = (en: string, es: string, pt: string) => {
     if (state.language === 'English') return en;
     if (state.language === 'Español') return es;
     return pt;
   };
+
+  // Daily activities 4-of-5 tracker status
+  const dailyStatus = getDailyActivityStatus();
+  const [showDailyActivitiesModal, setShowDailyActivitiesModal] = useState(false);
 
   // Today's focus message changes automatically every day and adapts to current language
   const [todayFocusMessage, setTodayFocusMessage] = useState<string>(() => {
@@ -751,6 +762,62 @@ export const HomeView: React.FC = () => {
         </div>
       </section>
 
+      {/* Daily Progress: o-o-o-o tracker showing whether 4 of 5 daily options are completed */}
+      <section className="w-full z-10 pt-2 flex flex-col items-center">
+        <button
+          type="button"
+          onClick={() => setShowDailyActivitiesModal(true)}
+          className="group w-full max-w-sm bg-white/40 hover:bg-black/5 border border-black/10 rounded-2xl py-2.5 px-4 shadow-none transition-all flex flex-col items-center gap-1.5 cursor-pointer focus:outline-none"
+          title={getLangText('Tap to view daily practices', 'Toca para ver prácticas diarias', 'Toque para ver práticas diárias')}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span className="font-sans text-[9px] font-bold uppercase tracking-[0.18em] text-black/55 group-hover:text-black transition-colors">
+              {getLangText('Daily Practices', 'Prácticas Diarias', 'Práticas Diárias')}
+            </span>
+            <span className={`font-mono text-[10px] font-bold ${dailyStatus.isGoalMet ? 'text-[#3e6355]' : 'text-black/60'}`}>
+              {Math.min(dailyStatus.completedCount, 4)} / 4 {dailyStatus.isGoalMet ? '✓' : ''}
+            </span>
+          </div>
+
+          {/* o-o-o-o bead track */}
+          <div className="flex items-center justify-center gap-1.5 py-0.5 w-full">
+            {[1, 2, 3, 4].map((step, idx) => {
+              const isFilled = dailyStatus.completedCount >= step;
+              return (
+                <React.Fragment key={step}>
+                  {idx > 0 && (
+                    <div
+                      className={`h-[2px] w-6 sm:w-8 transition-colors duration-300 rounded-full ${
+                        dailyStatus.completedCount >= step ? 'bg-[#3e6355]' : 'bg-black/15'
+                      }`}
+                    />
+                  )}
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center font-mono text-[10px] font-bold transition-all duration-300 ${
+                      isFilled
+                        ? 'bg-[#3e6355] text-white ring-2 ring-[#3e6355]/25 shadow-2xs scale-105'
+                        : 'bg-[#FAF8F5] text-black/35 border-2 border-black/25'
+                    }`}
+                  >
+                    {isFilled ? '●' : '○'}
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          <span className="font-sans text-[8.5px] font-medium text-black/45 tracking-wider uppercase">
+            {dailyStatus.isGoalMet
+              ? getLangText('Daily goal reached (4/4) • Tap for details', '¡Meta diaria cumplida (4/4)! • Toca para detalles', 'Meta diária alcançada (4/4)! • Toque para detalhes')
+              : getLangText(
+                  `${4 - dailyStatus.completedCount} more needed today • Tap to view practices`,
+                  `Faltan ${4 - dailyStatus.completedCount} hoy • Toca para ver prácticas`,
+                  `Faltam ${4 - dailyStatus.completedCount} hoje • Toque para ver práticas`
+                )}
+          </span>
+        </button>
+      </section>
+
       {/* Action Buttons: Start Ritual and Check In Navigation (Moved BELOW Focus/Intention Card) */}
       <section className="flex items-center justify-center gap-8 z-20 w-full pt-1">
         {/* Start Ritual button */}
@@ -939,6 +1006,187 @@ export const HomeView: React.FC = () => {
               >
                 {getText('confirm_reset')}
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Daily Practices (4 of 5) Breakdown Modal */}
+      {showDailyActivitiesModal && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fadeIn"
+          onClick={() => setShowDailyActivitiesModal(false)}
+        >
+          <div
+            className="bg-[#FDFBF7]/90 backdrop-blur-md rounded-3xl p-5 md:p-6 w-full max-w-lg border border-black/10 shadow-xl flex flex-col gap-4 text-left max-h-[90vh] overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-black/5 shrink-0">
+              <div>
+                <h3 className="font-serif text-base font-bold text-[#111111]">
+                  {getLangText('Daily Practices Tracker', 'Seguimiento de Prácticas Diarias', 'Práticas Diárias de Recuperação')}
+                </h3>
+                <p className="font-sans text-[11px] text-black/55">
+                  {getLangText('Complete any 4 of 5 practices to reach your daily goal', 'Completa 4 de 5 prácticas para cumplir tu meta de hoy', 'Complete 4 de 5 práticas para atingir sua meta de hoje')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDailyActivitiesModal(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-black/50 hover:text-black hover:bg-black/5 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* o-o-o-o Progress Summary */}
+            <div className="bg-white/40 p-3.5 rounded-2xl border border-black/10 flex flex-col items-center justify-center text-center gap-2">
+              {/* o-o-o-o at the top, center */}
+              <div className="flex items-center justify-center gap-1">
+                {[1, 2, 3, 4].map((step, idx) => {
+                  const isFilled = dailyStatus.completedCount >= step;
+                  return (
+                    <React.Fragment key={step}>
+                      {idx > 0 && (
+                        <div className={`h-[2px] w-6 rounded-full transition-colors duration-300 ${dailyStatus.completedCount >= step ? 'bg-[#3e6355]' : 'bg-black/15'}`} />
+                      )}
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center font-mono text-[9px] font-bold transition-all duration-300 ${isFilled ? 'bg-[#3e6355] text-white shadow-xs' : 'bg-white text-black/40 border border-black/20'}`}>
+                        {isFilled ? '●' : '○'}
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+
+              {/* Progress text or Goal Met text under it, center justified */}
+              {dailyStatus.completedCount >= 4 ? (
+                <div className="font-serif text-sm font-bold text-emerald-800 tracking-wide flex items-center justify-center gap-1">
+                  <span>{getLangText('Daily goal met! ✓', '¡Meta diaria cumplida! ✓', 'Meta diária atingida! ✓')}</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-1.5 text-center">
+                  <span className="font-sans text-xs font-medium text-black/60">
+                    {getLangText("Today's Progress:", 'Progreso de Hoy:', 'Progresso de Hoje:')}
+                  </span>
+                  <span className="font-serif text-sm font-semibold text-[#111111]">
+                    {dailyStatus.completedCount} / 4
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* List of 5 Options */}
+            <div className="flex flex-col gap-2.5 overflow-y-auto pr-1">
+              {[
+                {
+                  key: 'justForToday' as const,
+                  title: getLangText("'Just for Today' Active", "'Solo por hoy' Activo", "'Só por hoje' Ativo"),
+                  isDone: !!(dailyStatus.justForToday ?? dailyStatus.activities?.justForToday),
+                  icon: Sparkles,
+                  action: () => {
+                    setShowDailyActivitiesModal(false);
+                    setOpenBottomSheet('renew');
+                  },
+                  actionLabel: getLangText('Affirm', 'Afirmar', 'Afirmar')
+                },
+                {
+                  key: 'checkIn' as const,
+                  title: getLangText('Daily Check-in', 'Registro Diario', 'Check-in Diário'),
+                  isDone: !!(dailyStatus.checkIn ?? dailyStatus.activities?.checkIn),
+                  icon: FileText,
+                  action: () => {
+                    setShowDailyActivitiesModal(false);
+                    setActiveTab('trackers');
+                  },
+                  actionLabel: getLangText('Check In', 'Registrar', 'Check-in')
+                },
+                {
+                  key: 'meditation' as const,
+                  title: getLangText('Meditation', 'Meditación', 'Meditação'),
+                  isDone: !!(dailyStatus.meditation ?? dailyStatus.activities?.meditation),
+                  icon: Flower2,
+                  action: () => {
+                    setShowDailyActivitiesModal(false);
+                    setActiveTab('meditation');
+                  },
+                  actionLabel: getLangText('Meditate', 'Meditar', 'Meditar')
+                },
+                {
+                  key: 'breathing' as const,
+                  title: getLangText('Breathing Exercise', 'Ejercicio de Respiración', 'Exercício de Respiração'),
+                  isDone: !!(dailyStatus.breathing ?? dailyStatus.activities?.breathing),
+                  icon: Wind,
+                  action: () => {
+                    setShowDailyActivitiesModal(false);
+                    setActiveTab('breathing');
+                  },
+                  actionLabel: getLangText('Breathe', 'Respirar', 'Respirar')
+                },
+                {
+                  key: 'lesson' as const,
+                  title: getLangText('Recovery Lesson', 'Lección de Recuperación', 'Lição de Recuperação'),
+                  isDone: !!(dailyStatus.lesson ?? dailyStatus.activities?.lesson),
+                  icon: BookOpen,
+                  action: () => {
+                    setShowDailyActivitiesModal(false);
+                    setActiveTab('lessons');
+                  },
+                  actionLabel: getLangText('Open Lessons', 'Ver lecciones', 'Ver lições')
+                }
+              ].map(item => {
+                const ItemIcon = item.icon;
+                return (
+                  <div
+                    key={item.key}
+                    className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      item.isDone ? 'bg-emerald-50/40 border-emerald-800/15' : 'bg-white/40 border-black/10 hover:bg-black/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => recordDailyActivity(item.key, !item.isDone)}
+                        className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                          item.isDone
+                            ? 'bg-[#3e6355] text-white'
+                            : 'border-2 border-black/25 text-transparent hover:border-black/50'
+                        }`}
+                        title={getLangText('Toggle status', 'Cambiar estado', 'Alternar status')}
+                      >
+                        <Check className="w-4 h-4 stroke-[2.5]" />
+                      </button>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <ItemIcon className="w-4 h-4 text-black/50 shrink-0" />
+                        <h4 className={`font-sans text-xs font-bold truncate ${item.isDone ? 'text-emerald-950 line-through opacity-80' : 'text-[#111111]'}`}>
+                          {item.title}
+                        </h4>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      {item.isDone ? (
+                        <span className="font-sans text-[10px] font-bold text-emerald-800 uppercase tracking-wider px-2 py-0.5 bg-emerald-100/60 rounded-full">
+                          {getLangText('Done', 'Listo', 'Feito')}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={item.action}
+                          className="p-1 text-black/45 hover:text-black transition-colors cursor-pointer flex items-center justify-center"
+                          title={item.actionLabel}
+                          aria-label={item.actionLabel}
+                        >
+                          <ChevronRight className="w-4 h-4 stroke-[2.2]" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>,

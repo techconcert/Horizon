@@ -210,7 +210,8 @@ export const TrackersView: React.FC = () => {
     limitReached,
     addReflection,
     deleteReflection,
-    addCustomMood
+    addCustomMood,
+    recordDailyActivity
   } = useSanctuary();
   const getText = (en: string, es: string, pt: string) => {
     if (state.language === 'English') return en;
@@ -640,6 +641,7 @@ export const TrackersView: React.FC = () => {
     const content = reflectionContent.trim() || `${getText('Checked in feeling: ', 'Registro de ánimo: ', 'Check-in de humor: ')}${selectedMoods.map(m => getTranslatedMood(m)).join(', ')}`;
 
     const title = reflectionTitle.trim() || (getText('Daily Reflection', 'Reflexión diaria', 'Reflexão diária'));
+    recordDailyActivity('checkIn', true);
     addReflection(title, content, selectedMoods);
     setReflectionTitle('');
     setReflectionContent('');

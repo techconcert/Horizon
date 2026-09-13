@@ -1,6 +1,6 @@
 {
   "name": "horizon",
-  "version": "2.2.4",
+  "version": "2.2.13",
   "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
@@ -9,7 +9,8 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

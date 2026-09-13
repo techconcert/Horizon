@@ -78,6 +78,7 @@ export interface CloudPayload {
   supportLink?: string;
   lastSoberCheckInTime?: string;
   brotherhoods?: any[];
+  dailyActivities?: any;
   onboarded?: boolean;
 }
 
@@ -237,6 +238,13 @@ export function exportLocalStateToCloudPayload(): CloudPayload {
     } catch {}
   }
 
+  const dailyActivities = localStorage.getItem('dailyActivities');
+  if (dailyActivities) {
+    try {
+      payload.dailyActivities = JSON.parse(dailyActivities);
+    } catch {}
+  }
+
   payload.onboarded = true;
 
   return payload;
@@ -277,6 +285,9 @@ export function writePayloadToLocalStorage(payload: CloudPayload, syncCode?: str
   }
   if (payload.brotherhoods) {
     localStorage.setItem('brotherhoods', JSON.stringify(payload.brotherhoods));
+  }
+  if (payload.dailyActivities) {
+    localStorage.setItem('dailyActivities', JSON.stringify(payload.dailyActivities));
   }
   if (syncCode) {
     localStorage.setItem('horizon_sync_code', normalizeSyncCode(syncCode));

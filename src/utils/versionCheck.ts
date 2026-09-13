@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-export const APP_VERSION = '2.2.4';
+export const APP_VERSION = '2.2.12';
 const STORAGE_KEY = 'horizon_app_version';
 
 /**
@@ -50,7 +50,8 @@ export async function forceClearCacheAndReload() {
 
 /**
  * Checks if the stored version differs from the current APP_VERSION.
- * If a mismatch is detected, force-clears all cache and triggers reload.
+ * If a mismatch is detected, clears stale caches and updates stored version,
+ * without triggering recursive reload loops.
  */
 export function checkAndEnforceAppVersion() {
   try {
@@ -58,16 +59,17 @@ export function checkAndEnforceAppVersion() {
 
     // If there is no stored version or if the version does not match current APP_VERSION
     if (!storedVersion || storedVersion !== APP_VERSION) {
-      console.log(`[Horizon] Version mismatch detected (Stored: ${storedVersion}, Current: ${APP_VERSION}). Triggering cache purge...`);
+      console.log(`[Horizon] Version upgrade detected (Stored: ${storedVersion}, Current: ${APP_VERSION}). Purging stale caches...`);
       localStorage.setItem(STORAGE_KEY, APP_VERSION);
 
-      // Wipe caches immediately
+      // Wipe caches immediately in background
       if ('caches' in window) {
         caches.keys().then((names) => {
           Promise.all(names.map((n) => caches.delete(n))).catch(() => {});
         }).catch(() => {});
       }
 
+      // Unregister old service workers so the new version is served
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then((regs) => {
           Promise.all(regs.map((r) => {
@@ -75,14 +77,6 @@ export function checkAndEnforceAppVersion() {
             return r.unregister();
           })).catch(() => {});
         }).catch(() => {});
-      }
-
-      // If an older version was stored, reload to guarantee latest assets are fetched
-      if (storedVersion && storedVersion !== APP_VERSION) {
-        console.log('[Horizon] Upgrading from older version, reloading page...');
-        setTimeout(() => {
-          window.location.reload();
-        }, 150);
       }
     }
   } catch (err) {

@@ -87,8 +87,11 @@ if ('serviceWorker' in navigator) {
 
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) {
+      const now = Date.now();
+      const last = parseInt(sessionStorage.getItem('horizon_sw_reload_lock') || '0', 10);
+      if (!refreshing && now - last > 10000) {
         refreshing = true;
+        sessionStorage.setItem('horizon_sw_reload_lock', String(now));
         window.location.reload();
       }
     });
