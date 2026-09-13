@@ -438,15 +438,13 @@ export default function App() {
   const [isAdminRoute, setIsAdminRoute] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     const hash = window.location.hash.toLowerCase();
-    const search = window.location.search.toLowerCase();
-    return hash === '#admin' || hash === '#/admin' || search.includes('admin=true');
+    return hash === '#hzadmin' || hash === '#/hzadmin';
   });
 
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.toLowerCase();
-      const search = window.location.search.toLowerCase();
-      setIsAdminRoute(hash === '#admin' || hash === '#/admin' || search.includes('admin=true'));
+      setIsAdminRoute(hash === '#hzadmin' || hash === '#/hzadmin');
     };
 
     window.addEventListener('hashchange', handleHashChange);
