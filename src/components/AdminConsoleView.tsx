@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, limit, query } from 'firebase/firestore/lite';
+import LZString from 'lz-string';
 import { db } from '../lib/firebase';
 import { CloudPayload } from '../services/cloudSync';
 import {
@@ -31,6 +32,11 @@ interface BackupRecord {
   data: CloudPayload;
   updatedAt?: string;
   version?: number;
+  origin?: string;
+  appVersion?: string;
+  compressed?: boolean;
+  rawBytes?: number;
+  compressedBytes?: number;
 }
 
 const ADMIN_TOKEN_KEY = 'hzadmin_session_token';
@@ -134,11 +140,23 @@ export const AdminConsoleView: React.FC = () => {
       const items: BackupRecord[] = [];
       snap.forEach((d) => {
         const raw = d.data();
+        let payload = raw.data || {};
+        if (raw.compressed && typeof raw.cdata === 'string') {
+          try {
+            const decompressed = LZString.decompressFromBase64(raw.cdata);
+            if (decompressed) payload = JSON.parse(decompressed);
+          } catch {}
+        }
         items.push({
           syncCode: raw.syncCode || d.id,
-          data: raw.data || {},
+          data: payload,
           updatedAt: raw.updatedAt,
-          version: raw.version
+          version: raw.version,
+          origin: raw.origin || 'unknown',
+          appVersion: raw.appVersion || 'legacy',
+          compressed: !!raw.compressed,
+          rawBytes: raw.rawBytes,
+          compressedBytes: raw.compressedBytes,
         });
       });
 
@@ -380,6 +398,8 @@ export const AdminConsoleView: React.FC = () => {
               <thead>
                 <tr className="bg-[#101612] border-b border-[#233026] text-white/50 text-[10px] uppercase font-mono tracking-wider">
                   <th className="py-3 px-4">Sync Code</th>
+                  <th className="py-3 px-4">Origin</th>
+                  <th className="py-3 px-4">Version</th>
                   <th className="py-3 px-4">Sobriety Start</th>
                   <th className="py-3 px-4">Fellowships</th>
                   <th className="py-3 px-4">Sponsor</th>
@@ -391,7 +411,7 @@ export const AdminConsoleView: React.FC = () => {
               <tbody className="divide-y divide-[#1b251e]">
                 {isLoading && records.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-white/40 text-xs">
+                    <td colSpan={9} className="py-12 text-center text-white/40 text-xs">
                       <div className="flex items-center justify-center gap-2">
                         <div className="w-4 h-4 border-2 border-white/20 border-t-[#4ade80] rounded-full animate-spin" />
                         <span>Loading database records...</span>
@@ -400,7 +420,7 @@ export const AdminConsoleView: React.FC = () => {
                   </tr>
                 ) : filteredRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-white/40 text-xs">
+                    <td colSpan={9} className="py-12 text-center text-white/40 text-xs">
                       {searchTerm ? 'No records match your filter query.' : 'No backup records in database yet.'}
                     </td>
                   </tr>
@@ -410,6 +430,7 @@ export const AdminConsoleView: React.FC = () => {
                     const fellowships = (p.brotherhoods || []).map((b: any) => b.brotherhood).filter(Boolean);
                     const daysCount = p.dailyActivities ? Object.keys(p.dailyActivities).length : 0;
                     const isCopied = copiedCode === rec.syncCode;
+                    const isDev = rec.origin?.includes('ai_studio') || rec.origin?.includes('dev');
 
                     return (
                       <tr
@@ -421,6 +442,36 @@ export const AdminConsoleView: React.FC = () => {
                           <span className="font-mono text-xs font-bold text-[#86efac] tracking-wider">
                             {rec.syncCode}
                           </span>
+                        </td>
+
+                        {/* Origin (AI Studio Dev vs Real User / PWA) */}
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          {isDev ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                              AI Studio Dev
+                            </span>
+                          ) : rec.origin === 'standalone_pwa' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              Installed PWA
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                              <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                              {rec.origin || 'Web User'}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* App Version */}
+                        <td className="py-3 px-4 whitespace-nowrap font-mono text-[11px] text-white/60">
+                          {rec.appVersion ? `v${rec.appVersion}` : <span className="text-white/30 italic">legacy</span>}
+                          {rec.compressed && (
+                            <span className="ml-1.5 px-1 py-0.2 rounded text-[9px] bg-purple-950/60 text-purple-300 border border-purple-800/40" title="Compressed with LZString">
+                              LZ
+                            </span>
+                          )}
                         </td>
 
                         {/* Sobriety Start Date */}

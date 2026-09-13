@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useSanctuary } from '../context/SanctuaryContext';
+import { useHorizon } from '../context/HorizonContext';
 import { Step, SubLesson } from '../types';
 import { 
   ChevronLeft, 
@@ -25,7 +25,7 @@ export const LessonsView: React.FC = () => {
     updateSubLessonStatus, 
     getTranslation,
     addReflection
-  } = useSanctuary();
+  } = useHorizon();
 
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [activeSubLessonId, setActiveSubLessonId] = useState<string | null>(null);

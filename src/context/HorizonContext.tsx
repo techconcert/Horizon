@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { TabType, MoodType, Reflection, Step, SubLesson, SanctuaryState, BrotherhoodEntry, DailyActivityKey, DailyActivitiesMap } from '../types';
+import { TabType, MoodType, Reflection, Step, SubLesson, HorizonState, BrotherhoodEntry, DailyActivityKey, DailyActivitiesMap } from '../types';
 import { INITIAL_STEPS } from '../lessons';
 import { 
   getOrCreateSyncCode, 
@@ -13,16 +13,18 @@ import {
   exportLocalStateToCloudPayload, 
   writePayloadToLocalStorage, 
   normalizeSyncCode,
-  isCloudQuotaExceeded 
+  isCloudQuotaExceeded,
+  detectClientOrigin
 } from '../services/cloudSync';
+import { compactSteps, hydrateSteps } from '../utils/stepCompactor';
 import { detectDefaultLanguage } from '../utils/languageDetection';
 import { formatLocalDateToYMD, getDailyActivityStatus, DailyActivityStatusResult } from '../utils/dailyPractices';
 
 export { detectDefaultLanguage, formatLocalDateToYMD, getDailyActivityStatus };
 export type { DailyActivityStatusResult };
 
-interface SanctuaryContextType {
-  state: SanctuaryState;
+export interface HorizonContextType {
+  state: HorizonState;
   setActiveTab: (tab: TabType) => void;
   setCurrentLessonId: (id: string | null) => void;
   setSobrietyStartDate: (date: string) => void;
@@ -82,13 +84,13 @@ interface SanctuaryContextType {
   syncCode: string;
   lastCloudSync: string | null;
   cloudQuotaExceeded: boolean;
-  syncToCloud: () => Promise<boolean>;
+  syncToCloud: (isExplicit?: boolean) => Promise<boolean>;
   restoreFromSyncCode: (code: string) => Promise<{ success: boolean; error?: string }>;
   addBrotherhood: (brotherhood: string, entryDate: string) => void;
   deleteBrotherhood: (id: string) => void;
 }
 
-const SanctuaryContext = createContext<SanctuaryContextType | undefined>(undefined);
+export const HorizonContext = createContext<HorizonContextType | undefined>(undefined);
 
 const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português', string>> = {
   'app_title': { English: 'Horizon', Español: 'Horizon', Português: 'Horizon' },
@@ -180,13 +182,13 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'continue_reading': { English: 'Continue Reading', Español: 'Continuar leyendo', Português: 'Continuar lendo' },
   'locked_text': { English: 'Locked until previous Step is complete.', Español: 'Bloqueado hasta que completes el Paso anterior.', Português: 'Bloqueado até você completar o Passo anterior.' },
   'cumulative_progress': { English: 'Cumulative Progress', Español: 'Progreso acumulado', Português: 'Progresso acumulado' },
-  'sanctuary_secure': { English: 'Your sanctuary is secure. Only you have access to this space.', Español: 'Tu espacio está seguro. Solo tú tienes acceso a él.', Português: 'Seu espaço é seguro. Só você tem acesso aqui.' },
+  'sanctuary_secure': { English: 'Your private recovery space is secure. Only you have access to this space.', Español: 'Tu espacio está seguro. Solo tú tienes acceso a él.', Português: 'Seu espaço é seguro. Só você tem acesso aqui.' },
   'security': { English: 'Security', Español: 'Seguridad', Português: 'Segurança' },
   'biometric_lock': { English: 'FaceID / Biometric Lock', Español: 'FaceID / Bloqueo biométrico', Português: 'FaceID / Bloqueio biométrico' },
   'biometric_sub': { English: 'Require authentication to open', Español: 'Requerir autenticación al abrir', Português: 'Exigir autenticação ao abrir' },
   'preferences': { English: 'Preferences', Español: 'Preferencias', Português: 'Preferências' },
   'language': { English: 'Language', Español: 'Idioma', Português: 'Idioma' },
-  'data_sync': { English: 'Data & Sync', Español: 'Datos y sincronización', Português: 'Dados e sincronização' },
+  'data_sync': { English: 'Data & Sync', Español: 'Datos y sincronización', Português: 'Datos e sincronização' },
   'cloud_sync_desc': { English: 'iCloud / Google Drive Sync', Español: 'Sincronizar con iCloud / Google Drive', Português: 'Sincronizar com iCloud / Google Drive' },
   'last_synced': { English: 'Last Synced: 2 min ago', Español: 'Sincronizado: hace 2 min', Português: 'Última sincronização: há 2 min' },
   'export_journal': { English: 'Export My Journal', Español: 'Exportar mi diario', Português: 'Exportar meu diário' },
@@ -197,7 +199,7 @@ const TRANSLATIONS: Record<string, Record<'English' | 'Español' | 'Português',
   'mark_complete': { English: 'Mark Complete', Español: 'Marcar como completado', Português: 'Marcar como concluído' },
   're_read': { English: 'Completed', Español: 'Completado', Português: 'Concluído' },
   'ai_limit_reached': { English: 'Daily Limit Reached', Español: 'Límite diario alcanzado', Português: 'Limite diário atingido' },
-  'ai_limit_desc': { English: 'To keep this private sanctuary 100% free and sustainable, interactive generations are limited to 3 sessions per day. Showing a serene offline reflection for today.', Español: 'Para mantener este santuario 100% gratuito y sostenible, las sesiones con IA están limitadas a 3 por día. Mostrando una reflexión offline serena para hoy.', Português: 'Para manter este espaço 100% gratuito, as sessões interativas são limitadas a 3 por dia. Aqui vai uma reflexão offline serena para hoje.' },
+  'ai_limit_desc': { English: 'To keep Horizon 100% free and sustainable, interactive generations are limited to 3 sessions per day. Showing a serene offline reflection for today.', Español: 'Para mantener Horizon 100% gratuito y sostenible, las sesiones con IA están limitadas a 3 por día. Mostrando una reflexión offline serena para hoy.', Português: 'Para manter o Horizon 100% gratuito, as sessões interativas são limitadas a 3 por dia. Aqui vai uma reflexão offline serena para hoje.' },
   'ai_remaining_credits': { English: 'Daily Credits Used', Español: 'Créditos diarios usados', Português: 'Créditos diários usados' },
   'reflection_questions': { English: 'Reflection Questions', Español: 'Preguntas de Reflexión', Português: 'Perguntas de Reflexão' },
   'previous_lesson': { English: 'Previous Lesson', Español: 'Lección Anterior', Português: 'Lição Anterior' },
@@ -427,7 +429,7 @@ export const formatAccumulatedTime = (
   return parts.join(', ');
 };
 
-export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const HorizonProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [onboarded, setOnboardedState] = useState<boolean>(() => {
     return localStorage.getItem('onboarded') === 'true';
   });
@@ -489,24 +491,10 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       try {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.length > 0) {
-          // Always map user progress (locks and read statuses) on top of the clean INITIAL_STEPS to ensure updated text/descriptions are immediately applied.
-          const newSteps = JSON.parse(JSON.stringify(INITIAL_STEPS));
-          parsed.forEach((oldStep, i) => {
-            if (newSteps[i]) {
-              newSteps[i].locked = oldStep.locked !== undefined ? oldStep.locked : newSteps[i].locked;
-              if (oldStep.subLessons) {
-                oldStep.subLessons.forEach((oldSub, j) => {
-                  if (newSteps[i].subLessons[j] && oldSub) {
-                    newSteps[i].subLessons[j].status = oldSub.status || 'UNREAD';
-                  }
-                });
-              }
-            }
-          });
-          return newSteps;
+          return hydrateSteps(parsed, INITIAL_STEPS);
         }
         return INITIAL_STEPS;
-      } catch(e) {
+      } catch (e) {
         return INITIAL_STEPS;
       }
     }
@@ -658,7 +646,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [customMoods]);
 
   useEffect(() => {
-    localStorage.setItem('steps', JSON.stringify(steps));
+    localStorage.setItem('steps', JSON.stringify(compactSteps(steps)));
   }, [steps]);
 
   useEffect(() => {
@@ -869,7 +857,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       Joyful: 'Just for today, I radiate positivity and embrace the happiness of being clean.',
       Hopeful: 'Just for today, I trust that my path of recovery is leading me to a beautiful future.',
       Peaceful: 'Just for today, I release all anxiety and welcome the soft calm into my spirit.',
-      Grateful: 'Just for today, I give deep thanks for my progress, my sanctuary, and my community.',
+      Grateful: 'Just for today, I give deep thanks for my progress, my peace, and my community.',
       Anxious: 'Just for today, I give myself permission to rest, to reset, and to begin again without judgment.',
       Frustrated: 'Just for today, I accept that I cannot control everything, and I let go of expectations.',
       Overwhelmed: 'Just for today, I take this day one single breath at a time. I am where I need to be.',
@@ -992,7 +980,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const isLimitReached = aiUsage.date === formatLocalDateToYMD() && aiUsage.count >= 3;
 
-  const syncToCloud = async (): Promise<boolean> => {
+  const syncToCloud = async (isExplicit: boolean = false): Promise<boolean> => {
     if (!syncEnabled) return false;
     if (isCloudQuotaExceeded()) {
       setCloudQuotaExceeded(true);
@@ -1000,7 +988,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     try {
       const payload = exportLocalStateToCloudPayload();
-      const res = await saveToCloud(syncCode, payload);
+      const res = await saveToCloud(syncCode, payload, isExplicit);
       if (res.quotaExceeded) {
         setCloudQuotaExceeded(true);
       } else {
@@ -1028,7 +1016,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       if (data.sobrietyStartDate) setSobrietyStartDateState(data.sobrietyStartDate);
       if (data.reflections) setReflections(data.reflections);
-      if (data.steps) setSteps(data.steps);
+      if (data.steps) setSteps(hydrateSteps(data.steps, INITIAL_STEPS));
       if (data.customMoods) setCustomMoods(data.customMoods);
       if (data.language) setLanguageState(data.language as any);
       if (data.supportNumber !== undefined) setSupportNumberState(data.supportNumber);
@@ -1058,10 +1046,20 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setCloudQuotaExceeded(true);
       return;
     }
-    if (onboarded || reflections.length > 0 || brotherhoods.length > 0) {
+    const hasMeaningfulData =
+      onboarded ||
+      reflections.length > 0 ||
+      brotherhoods.length > 0 ||
+      !!sobrietyStartDate;
+
+    if (hasMeaningfulData) {
+      const origin = detectClientOrigin();
+      // Use 30s debounce for dev environments and 15s for standalone/web users
+      const debounceDelay = origin === 'ai_studio_dev' ? 30000 : 15000;
+
       const timer = setTimeout(() => {
-        syncToCloud().catch(() => {});
-      }, 5000);
+        syncToCloud(false).catch(() => {});
+      }, debounceDelay);
       return () => clearTimeout(timer);
     }
   }, [sobrietyStartDate, reflections, steps, customMoods, lastSoberCheckInTime, onboarded, syncEnabled, brotherhoods, dailyActivities]);
@@ -1082,7 +1080,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   return (
-    <SanctuaryContext.Provider
+    <HorizonContext.Provider
       value={{
         state: { 
           sobrietyStartDate, 
@@ -1113,7 +1111,7 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         toggleSoberCheckIn,
         recordDailyActivity,
         getDailyActivityStatus: (dateStr?: string) => {
-          const currentState: SanctuaryState = {
+          const currentState: HorizonState = {
             sobrietyStartDate,
             reflections,
             activeTab,
@@ -1168,12 +1166,12 @@ export const SanctuaryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }}
     >
       {children}
-    </SanctuaryContext.Provider>
+    </HorizonContext.Provider>
   );
 };
 
-export const useSanctuary = () => {
-  const context = useContext(SanctuaryContext);
-  if (!context) throw new Error('useSanctuary must be used within SanctuaryProvider');
+export const useHorizon = () => {
+  const context = useContext(HorizonContext);
+  if (!context) throw new Error('useHorizon must be used within HorizonProvider');
   return context;
 };

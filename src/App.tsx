@@ -5,13 +5,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { SanctuaryProvider, useSanctuary } from './context/SanctuaryContext';
+import { HorizonProvider, useHorizon } from './context/HorizonContext';
 import { NavBar } from './components/NavBar';
 import { HomeView } from './components/HomeView';
 import { TrackersView } from './components/TrackersView';
 import { MeditationView } from './components/MeditationView';
 import { BreathingView } from './components/BreathingView';
-import { ToolsView } from './components/ToolsView';
 import { LessonsView } from './components/LessonsView';
 import { ProfileView } from './components/ProfileView';
 import { AdminConsoleView } from './components/AdminConsoleView';
@@ -20,8 +19,8 @@ import { Shield, Lock, Fingerprint, RefreshCw, User, HeartHandshake, X, Phone, V
 import { OnboardingView } from './components/OnboardingView';
 import { MigrationBanner } from './components/MigrationBanner';
 
-const SanctuaryContent: React.FC = () => {
-  const { state, setActiveTab, showSOSModal, setShowSOSModal, getTranslation } = useSanctuary();
+const HorizonContent: React.FC = () => {
+  const { state, setActiveTab, showSOSModal, setShowSOSModal, getTranslation } = useHorizon();
 
   const [sessionUnlocked, setSessionUnlocked] = useState(false);
   const [passcode, setPasscode] = useState<string>('');
@@ -94,7 +93,7 @@ const SanctuaryContent: React.FC = () => {
             {getTranslation('app_title')}
           </h1>
           <p className="font-sans text-[10px] font-semibold text-black tracking-widest uppercase mb-6 opacity-60">
-            — Private Sanctuary —
+            — Private Space —
           </p>
           <p className="font-sans text-xs text-[#444444] mb-8 max-w-xs leading-relaxed">
             {state.language === 'English'
@@ -208,10 +207,16 @@ const SanctuaryContent: React.FC = () => {
       </div>
 
       {/* Persistent Top-Right Action: Reach Out ONLY (the only sticky button) */}
-      <div className="fixed top-3 right-4 md:right-8 z-50">
+      <div
+        className="fixed z-50 transition-all"
+        style={{
+          top: 'max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.35rem))',
+          right: 'max(1rem, calc(env(safe-area-inset-right, 0px) + 0.75rem))'
+        }}
+      >
         <button
           onClick={() => setShowSOSModal(true)}
-          className="w-8 h-8 rounded-full flex items-center justify-center select-none bg-red-800 hover:bg-red-700 active:bg-red-900 text-white border border-red-900/30 shadow-xs transition-all cursor-pointer touch-manipulation active:scale-95"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center select-none bg-red-800 hover:bg-red-700 active:bg-red-900 text-white border border-red-900/30 shadow-md transition-all cursor-pointer touch-manipulation active:scale-95 min-w-[36px] min-h-[36px]"
           title={reachOutTitle}
           aria-label={reachOutTitle}
         >
@@ -220,7 +225,10 @@ const SanctuaryContent: React.FC = () => {
       </div>
 
       {/* Top Header Navigation Bar (non-sticky, scrolls with page) */}
-      <header className="relative w-full z-40 px-4 md:px-8 py-3 flex items-center justify-between bg-transparent">
+      <header
+        className="relative w-full z-40 px-4 md:px-8 pb-3 flex items-center justify-between bg-transparent"
+        style={{ paddingTop: 'max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.35rem))' }}
+      >
         <div className="flex flex-col">
           <h1
             className="font-serif text-2xl md:text-3xl text-[#143224] font-semibold tracking-tight"
@@ -259,7 +267,7 @@ const SanctuaryContent: React.FC = () => {
           {/* Settings / Profile button (non-sticky) */}
           <button
             onClick={() => setActiveTab('profile')}
-            className={`w-8 h-8 rounded-full flex items-center justify-center select-none border transition-all cursor-pointer shadow-xs ${
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center select-none border transition-all cursor-pointer shadow-xs touch-manipulation ${
               state.activeTab === 'profile'
                 ? 'bg-[#3e6355] border-[#3e6355] text-[#F8F5F2] scale-105 ring-2 ring-[#3e6355]/30'
                 : 'bg-[#183628] border-[#183628] text-[#F8F5F2] hover:bg-[#254d3b]'
@@ -273,10 +281,13 @@ const SanctuaryContent: React.FC = () => {
       </header>
 
       {/* Main Viewport panel */}
-      <main className="flex-grow w-full max-w-7xl mx-auto px-4 md:px-8 pt-1 pb-24 md:pt-2 md:pb-24 relative z-10 animate-fadeIn">
+      <main
+        className="flex-grow w-full max-w-7xl mx-auto px-4 md:px-8 pt-1 relative z-10 animate-fadeIn"
+        style={{ paddingBottom: 'max(6.5rem, calc(env(safe-area-inset-bottom, 0px) + 5.75rem))' }}
+      >
         {state.activeTab === 'home' && <HomeView />}
         {state.activeTab === 'trackers' && <TrackersView />}
-        {(state.activeTab === 'meditation' || state.activeTab === 'tools') && <MeditationView />}
+        {state.activeTab === 'meditation' && <MeditationView />}
         {state.activeTab === 'breathing' && <BreathingView />}
         {state.activeTab === 'lessons' && <LessonsView />}
         {state.activeTab === 'profile' && <ProfileView />}
@@ -285,8 +296,9 @@ const SanctuaryContent: React.FC = () => {
       {/* Dynamic alternating page footer background using user's uploaded PNGs (both permanently mounted in DOM for instant cache) */}
       <div
         aria-hidden="true"
-        className="absolute bottom-[68px] sm:bottom-[72px] inset-x-0 w-full h-36 sm:h-44 md:h-52 lg:h-60 overflow-hidden pointer-events-none z-0 select-none"
+        className="absolute inset-x-0 w-full h-36 sm:h-44 md:h-52 lg:h-60 overflow-hidden pointer-events-none z-0 select-none"
         style={{
+          bottom: 'max(4.25rem, calc(env(safe-area-inset-bottom, 0px) + 4.25rem))',
           maskImage: 'linear-gradient(to top, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.45) 25%, rgba(0,0,0,0.30) 60%, rgba(0,0,0,0.00) 100%)',
           WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.45) 25%, rgba(0,0,0,0.30) 60%, rgba(0,0,0,0.00) 100%)',
         }}
@@ -463,8 +475,8 @@ export default function App() {
   }
 
   return (
-    <SanctuaryProvider>
-      <SanctuaryContent />
-    </SanctuaryProvider>
+    <HorizonProvider>
+      <HorizonContent />
+    </HorizonProvider>
   );
 }

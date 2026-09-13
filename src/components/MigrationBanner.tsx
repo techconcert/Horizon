@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowUpRight, CheckCircle2, Copy, Check, X } from 'lucide-react';
 import { isOldDomain } from '../utils/migration';
-import { useSanctuary } from '../context/SanctuaryContext';
+import { useHorizon } from '../context/HorizonContext';
 
 interface BannerText {
   domainPrefix: string;
@@ -53,7 +53,7 @@ const TEXTS: Record<'English' | 'Español' | 'Português', BannerText> = {
 };
 
 export const MigrationBanner: React.FC = () => {
-  const { state, syncCode, syncToCloud } = useSanctuary();
+  const { state, syncCode, syncToCloud } = useHorizon();
   const [showOldDomainBanner, setShowOldDomainBanner] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -68,7 +68,7 @@ export const MigrationBanner: React.FC = () => {
       if (!dismissed) {
         setShowOldDomainBanner(true);
         // Ensure latest data is backed up to Firestore under this device's sync code
-        syncToCloud().catch(() => {});
+        syncToCloud(true).catch(() => {});
       }
     }
 
@@ -90,7 +90,7 @@ export const MigrationBanner: React.FC = () => {
 
   const handleCopyCode = async () => {
     if (syncCode) {
-      syncToCloud().catch(() => {});
+      syncToCloud(true).catch(() => {});
       try {
         await navigator.clipboard.writeText(syncCode);
         setCodeCopied(true);

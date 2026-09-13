@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { SanctuaryState, DailyActivityKey } from '../types';
+import { HorizonState, DailyActivityKey } from '../types';
 
 export const formatLocalDateToYMD = (date: Date = new Date()): string => {
   const y = date.getFullYear();
@@ -30,7 +30,7 @@ export interface DailyActivityStatusResult {
 }
 
 export function getDailyActivityStatus(
-  state: SanctuaryState,
+  state: HorizonState,
   targetDate: string = formatLocalDateToYMD()
 ): DailyActivityStatusResult {
   const dayRecord = state.dailyActivities?.[targetDate] || {};

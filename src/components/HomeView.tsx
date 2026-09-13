@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useSanctuary, formatAccumulatedTime } from '../context/SanctuaryContext';
+import { useHorizon, formatAccumulatedTime } from '../context/HorizonContext';
 import { getDailyFocusMessage } from '../data/dailyFocusMessages';
 import {
   Check,
@@ -207,7 +207,7 @@ export const HomeView: React.FC = () => {
     syncToCloud,
     getDailyActivityStatus,
     recordDailyActivity
-  } = useSanctuary();
+  } = useHorizon();
   const getLangText = (en: string, es: string, pt: string) => {
     if (state.language === 'English') return en;
     if (state.language === 'Español') return es;
@@ -715,7 +715,7 @@ export const HomeView: React.FC = () => {
             <button
               type="button"
               onClick={() => setOpenBottomSheet('renew')}
-              className={`flex-1 py-2.5 px-3 rounded-full font-sans text-[10px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] ${
+              className={`flex-1 py-2.5 px-3 min-h-[42px] rounded-full font-sans text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-wider sm:tracking-widest flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] touch-manipulation whitespace-nowrap ${
                 state.soberCheckedInToday
                   ? 'bg-[#3e6355] hover:bg-[#314f44] text-white border border-[#3e6355]'
                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
@@ -738,7 +738,7 @@ export const HomeView: React.FC = () => {
             <button
               type="button"
               onClick={() => setOpenBottomSheet('reset')}
-              className="flex-1 py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-200 rounded-full font-sans text-[10px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="flex-1 py-2.5 px-3 min-h-[42px] bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-200 rounded-full font-sans text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-wider sm:tracking-widest flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] touch-manipulation whitespace-nowrap"
             >
               <RotateCcw className="w-4 h-4 shrink-0" />
               <span>{getLangText('Reset', 'Reiniciar', 'Zerar')}</span>
@@ -883,7 +883,8 @@ export const HomeView: React.FC = () => {
           onClick={() => setOpenBottomSheet(null)}
         >
           <div 
-            className="bg-[#F8F5F2] w-full max-w-md rounded-t-[2rem] border-t border-black/10 shadow-2xl p-6 pb-8 flex flex-col gap-4 animate-slideUp max-h-[85vh] overflow-y-auto"
+            className="bg-[#F8F5F2] w-full max-w-md rounded-t-[2rem] border-t border-black/10 shadow-2xl p-6 flex flex-col gap-4 animate-slideUp max-h-[85vh] overflow-y-auto"
+            style={{ paddingBottom: 'max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1.75rem))' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Decorative slider bar handle at top */}
@@ -962,7 +963,8 @@ export const HomeView: React.FC = () => {
           onClick={() => setOpenBottomSheet(null)}
         >
           <div 
-            className="bg-[#F8F5F2] w-full max-w-md rounded-t-[2rem] border-t border-black/10 shadow-2xl p-6 pb-8 flex flex-col gap-4 animate-slideUp max-h-[85vh] overflow-y-auto"
+            className="bg-[#F8F5F2] w-full max-w-md rounded-t-[2rem] border-t border-black/10 shadow-2xl p-6 flex flex-col gap-4 animate-slideUp max-h-[85vh] overflow-y-auto"
+            style={{ paddingBottom: 'max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1.75rem))' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Decorative slider bar handle at top */}

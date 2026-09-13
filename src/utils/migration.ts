@@ -40,6 +40,15 @@ export function hasUserUserData(): boolean {
   );
 }
 
+function toUtf8Base64(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 export function buildMigrationPayload(): string {
   const payload: Record<string, string> = {};
   for (const key of STORAGE_KEYS) {
@@ -53,14 +62,14 @@ export function buildMigrationPayload(): string {
     payload['onboarded'] = 'true';
   }
   const jsonStr = JSON.stringify(payload);
-  return encodeURIComponent(btoa(unescape(encodeURIComponent(jsonStr))));
+  return encodeURIComponent(toUtf8Base64(jsonStr));
 }
 
 export function getMigrationTargetUrl(): string {
   const code = getOrCreateSyncCode();
-  // Auto-backup to Firestore cloud before navigating
+  // Auto-backup to Firestore cloud before navigating (explicit user action)
   const cloudData = exportLocalStateToCloudPayload();
-  saveToCloud(code, cloudData).catch(() => {});
+  saveToCloud(code, cloudData, true).catch(() => {});
 
   const encoded = buildMigrationPayload();
   return `https://horizon-barrmy.ai.studio/#sync=${code}&migrate=${encoded}`;

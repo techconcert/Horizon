@@ -1,6 +1,6 @@
 {
   "name": "horizon",
-  "version": "2.3.4",
+  "version": "2.3.8",
   "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
@@ -20,6 +20,7 @@
     "express": "^4.21.2",
     "firebase": "^12.18.0",
     "lucide-react": "^0.546.0",
+    "lz-string": "^1.5.0",
     "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
+    "@types/lz-string": "^1.5.0",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",

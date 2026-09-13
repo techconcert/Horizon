@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useSanctuary, formatLocalDateToYMD, parseSobrietyDateSafely, formatAccumulatedTime, calculateTimeGrounded } from '../context/SanctuaryContext';
+import { useHorizon, formatLocalDateToYMD, parseSobrietyDateSafely, formatAccumulatedTime, calculateTimeGrounded } from '../context/HorizonContext';
 import {
   Calendar,
   Lock,
@@ -139,7 +139,7 @@ export const ProfileView: React.FC = () => {
     restoreFromSyncCode,
     addBrotherhood,
     deleteBrotherhood
-  } = useSanctuary();
+  } = useHorizon();
 
   const [dateInput, setDateInput] = useState(() => {
     // Format sobrietyStartDate as YYYY-MM-DD for standard html date input
@@ -215,7 +215,7 @@ export const ProfileView: React.FC = () => {
   const handleManualSync = async () => {
     setIsCloudSyncing(true);
     setCloudMessage(null);
-    const success = await syncToCloud();
+    const success = await syncToCloud(true);
     setIsCloudSyncing(false);
     if (success) {
       setCloudMessage({
@@ -782,7 +782,7 @@ export const ProfileView: React.FC = () => {
       {/* App License & Version Footer */}
       <footer className="text-center py-4 text-xs font-sans text-black/40 space-y-2">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-          <p className="font-medium text-black/50">Horizon v2.3.4</p>
+          <p className="font-medium text-black/50">Horizon v2.3.8</p>
           <span className="hidden sm:inline text-black/20">•</span>
           <button
             type="button"

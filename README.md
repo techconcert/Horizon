@@ -122,7 +122,8 @@ npm start
 │   │   ├── NavBar.tsx          # Navigation bar
 │   │   └── MigrationBanner.tsx # Cross-domain migration notice
 │   ├── context/
-│   │   └── SanctuaryContext.tsx# Centralized state management & localization
+│   │   ├── HorizonContext.tsx  # Centralized state management & localization
+│   │   └── SanctuaryContext.tsx# Backward-compatibility alias wrapper
 │   ├── services/
 │   │   └── cloudSync.ts        # Firestore anonymous cloud backup & restore
 │   ├── lib/

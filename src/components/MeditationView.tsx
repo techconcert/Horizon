@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useSanctuary } from '../context/SanctuaryContext';
+import { useHorizon } from '../context/HorizonContext';
 import {
   Play,
   Pause,
@@ -43,7 +43,7 @@ interface PrayerItem {
 }
 
 export const MeditationView: React.FC = () => {
-  const { state, getTranslation, addReflection, recordDailyActivity } = useSanctuary();
+  const { state, getTranslation, addReflection, recordDailyActivity } = useHorizon();
 
   const getText = (en: string, es: string, pt: string) => {
     if (state.language === 'English') return en;

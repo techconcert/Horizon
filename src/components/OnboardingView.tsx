@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useSanctuary, formatLocalDateToYMD, parseSobrietyDateSafely } from '../context/SanctuaryContext';
+import { useHorizon, formatLocalDateToYMD, parseSobrietyDateSafely } from '../context/HorizonContext';
 import { detectDefaultLanguage } from '../utils/languageDetection';
 import { 
   Globe, 
@@ -127,7 +127,7 @@ export const OnboardingView: React.FC = () => {
     setSupportLink,
     setOnboarded,
     restoreFromSyncCode
-  } = useSanctuary();
+  } = useHorizon();
 
   const [stepIndex, setStepIndex] = useState(0);
 
@@ -136,7 +136,7 @@ export const OnboardingView: React.FC = () => {
     return state.language || detectDefaultLanguage();
   });
 
-  // Ensure sanctuary context language matches deduced onboarding language if not explicitly stored
+  // Ensure context language matches deduced onboarding language if not explicitly stored
   useEffect(() => {
     const deduced = state.language || detectDefaultLanguage();
     if (deduced && deduced !== state.language) {

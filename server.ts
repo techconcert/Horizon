@@ -10,6 +10,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, limit, query } from 'firebase/firestore/lite';
+import LZString from 'lz-string';
 import dotenv from 'dotenv';
 import firebaseConfig from './firebase-applet-config.json';
 
@@ -189,11 +190,23 @@ app.get('/api/admin/records', async (req, res) => {
     const items: any[] = [];
     snap.forEach((d) => {
       const raw = d.data();
+      let payload = raw.data || {};
+      if (raw.compressed && typeof raw.cdata === 'string') {
+        try {
+          const decompressed = LZString.decompressFromBase64(raw.cdata);
+          if (decompressed) payload = JSON.parse(decompressed);
+        } catch {}
+      }
       items.push({
         syncCode: raw.syncCode || d.id,
-        data: raw.data || {},
+        data: payload,
         updatedAt: raw.updatedAt,
         version: raw.version,
+        origin: raw.origin || 'unknown',
+        appVersion: raw.appVersion || 'legacy',
+        compressed: !!raw.compressed,
+        rawBytes: raw.rawBytes,
+        compressedBytes: raw.compressedBytes,
       });
     });
 
@@ -233,7 +246,7 @@ app.post('/api/ai/intention', async (req, res) => {
   }
 
   try {
-    const systemPrompt = `You are a serene, highly-compassionate mindfulness and recovery guide for a digital sanctuary app.
+    const systemPrompt = `You are a serene, highly-compassionate mindfulness and recovery guide for the Horizon recovery app.
 Based on the user's current mood, generate a single, elegant, comforting daily intention or mantra.
 The mantra should be short (1 sentence), powerful, deeply grounded, and reassuring.
 When possible, start the focus message with:
@@ -289,7 +302,7 @@ app.post('/api/ai/insights', async (req, res) => {
   try {
     const journalText = reflections.map((r: any) => `[${r.date}] Title: ${r.title}\nMoods: ${r.moods?.join(', ')}\nContent: ${r.content}`).join('\n\n');
 
-    const systemPrompt = `You are an expert recovery guide and empathetic sentiment analyst for a spiritual sanctuary.
+    const systemPrompt = `You are an expert recovery guide and empathetic sentiment analyst for the Horizon recovery app.
 Review the user's recent journal reflections and mood logs.
 Generate a gentle, compassionate, and highly supportive sentiment insight of exactly 2-3 sentences.
 Highlight their emotional patterns, congratulate them on their self-awareness, and offer a soft, encouraging word for their journey.

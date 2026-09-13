@@ -6,9 +6,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { getDailyActivityStatus, formatLocalDateToYMD } from './dailyPractices';
-import { SanctuaryState } from '../types';
+import { HorizonState } from '../types';
 
-function createMockState(overrides: Partial<SanctuaryState> = {}): SanctuaryState {
+function createMockState(overrides: Partial<HorizonState> = {}): HorizonState {
   return {
     sobrietyStartDate: '2026-01-01',
     reflections: [],

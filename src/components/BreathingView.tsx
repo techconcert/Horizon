@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useSanctuary } from '../context/SanctuaryContext';
+import { useHorizon } from '../context/HorizonContext';
 import {
   Volume2,
   Heart,
@@ -166,7 +166,7 @@ const PHASE_STYLES: Record<'Inhale' | 'Hold' | 'Exhale' | 'Rest', PhaseStyle> = 
 };
 
 export const BreathingView: React.FC = () => {
-  const { state, getTranslation, addReflection, recordDailyActivity } = useSanctuary();
+  const { state, getTranslation, addReflection, recordDailyActivity } = useHorizon();
 
   const getText = (en: string, es: string, pt: string) => {
     if (state.language === 'English') return en;
@@ -619,7 +619,7 @@ export const BreathingView: React.FC = () => {
                 </button>
 
                 {/* 2-line Name */}
-                <div className="flex flex-col items-center justify-center font-sans text-[11px] sm:text-xs font-bold leading-tight px-0.5">
+                <div className="flex flex-col items-center justify-center font-sans text-[10px] sm:text-xs font-bold leading-tight px-0.5">
                   <span className="block">{trans.line1}</span>
                   <span className="block">{trans.line2}</span>
                 </div>

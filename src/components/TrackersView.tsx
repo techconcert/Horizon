@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useSanctuary } from '../context/SanctuaryContext';
+import { useHorizon } from '../context/HorizonContext';
 import { MoodType, Reflection } from '../types';
 import {
   Sun,
@@ -212,7 +212,7 @@ export const TrackersView: React.FC = () => {
     deleteReflection,
     addCustomMood,
     recordDailyActivity
-  } = useSanctuary();
+  } = useHorizon();
   const getText = (en: string, es: string, pt: string) => {
     if (state.language === 'English') return en;
     if (state.language === 'Español') return es;

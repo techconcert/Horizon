@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-export type TabType = 'home' | 'trackers' | 'meditation' | 'breathing' | 'lessons' | 'profile' | 'tools';
+export type TabType = 'home' | 'trackers' | 'meditation' | 'breathing' | 'lessons' | 'profile';
 
 export type MoodType = 
   | 'Calm' 
@@ -86,7 +86,7 @@ export interface DailyActivitiesMap {
   [dateStr: string]: DailyActivityProgress;
 }
 
-export interface SanctuaryState {
+export interface HorizonState {
   sobrietyStartDate: string; // ISO string
   reflections: Reflection[];
   activeTab: TabType;

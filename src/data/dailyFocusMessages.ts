@@ -41,9 +41,9 @@ export const DAILY_FOCUS_MESSAGES: DailyFocusMessage[] = [
     Português: 'Só por hoje, terei um programa. Vou me livrar de dois males: a pressa e a indecisão.'
   },
   {
-    English: 'Feelings are weather passing through the sky of my mind. No storm lasts forever; I remain rooted in my sanctuary.',
+    English: 'Feelings are weather passing through the sky of my mind. No storm lasts forever; I remain rooted in my peace.',
     Español: 'Los sentimientos son como el clima pasando por el cielo de mi mente. Ninguna tormenta dura para siempre; permanezco firme en mi calma.',
-    Português: 'Os sentimentos são como o clima passando pelo céu da minha mente. Nenhuma tempestade dura para sempre; permaneço firme no meu santuário.'
+    Português: 'Os sentimentos são como o clima passando pelo céu da minha mente. Nenhuma tempestade dura para sempre; permaneço firme na minha paz.'
   },
   {
     English: 'Just for today, through my recovery, I will look at life with fresh perspective, openness, and gentle curiosity.',
