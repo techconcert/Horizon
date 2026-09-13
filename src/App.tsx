@@ -434,24 +434,27 @@ const SanctuaryContent: React.FC = () => {
   );
 };
 
+const checkIsAdmin = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const hash = (window.location.hash || '').toLowerCase();
+  const path = (window.location.pathname || '').toLowerCase();
+  const search = (window.location.search || '').toLowerCase();
+  return hash.includes('hzadmin') || path.includes('hzadmin') || search.includes('hzadmin');
+};
+
 export default function App() {
-  const [isAdminRoute, setIsAdminRoute] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    const hash = window.location.hash.toLowerCase();
-    return hash === '#hzadmin' || hash === '#/hzadmin';
-  });
+  const [isAdminRoute, setIsAdminRoute] = useState<boolean>(checkIsAdmin);
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.toLowerCase();
-      setIsAdminRoute(hash === '#hzadmin' || hash === '#/hzadmin');
+    const handleLocationChange = () => {
+      setIsAdminRoute(checkIsAdmin());
     };
 
-    window.addEventListener('hashchange', handleHashChange);
-    window.addEventListener('popstate', handleHashChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
     return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-      window.removeEventListener('popstate', handleHashChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
     };
   }, []);
 

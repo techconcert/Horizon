@@ -20,7 +20,10 @@ import {
   Users,
   Phone,
   Clock,
-  Database
+  Database,
+  Eye,
+  EyeOff,
+  KeyRound
 } from 'lucide-react';
 
 interface BackupRecord {
@@ -30,16 +33,24 @@ interface BackupRecord {
   version?: number;
 }
 
-const AUTHORIZED_ADMIN_EMAIL = 'cobaltmacawgames@gmail.com';
-const ADMIN_SESSION_KEY = 'hzadmin_session_auth';
+const ADMIN_TOKEN_KEY = 'hzadmin_session_token';
+const ADMIN_EMAIL_KEY = 'hzadmin_saved_email';
 
 export const AdminConsoleView: React.FC = () => {
+  const [token, setToken] = useState<string>(() => {
+    return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+  });
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
+    return !!sessionStorage.getItem(ADMIN_TOKEN_KEY);
   });
 
-  const [inputEmail, setInputEmail] = useState<string>('');
+  const [inputEmail, setInputEmail] = useState<string>(() => {
+    return localStorage.getItem(ADMIN_EMAIL_KEY) || 'cobaltmacawgames@gmail.com';
+  });
+  const [inputPasskey, setInputPasskey] = useState<string>('');
+  const [showPasskey, setShowPasskey] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Table Data & Filter
   const [records, setRecords] = useState<BackupRecord[]>([]);
@@ -48,21 +59,47 @@ export const AdminConsoleView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
-    const cleanEmail = inputEmail.trim().toLowerCase();
+    setIsSubmitting(true);
 
-    if (cleanEmail === AUTHORIZED_ADMIN_EMAIL.toLowerCase()) {
-      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: inputEmail.trim(), 
+          passkey: inputPasskey.trim() 
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'Authentication failed. Please check your credentials.');
+      }
+
+      sessionStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+      localStorage.setItem(ADMIN_EMAIL_KEY, inputEmail.trim());
+      setToken(data.token);
       setIsAuthenticated(true);
-    } else {
-      setAuthError('Unauthorized. Only the administrator account may access this console.');
+      setInputPasskey('');
+    } catch (err: any) {
+      setAuthError(err.message || 'Login failed. Check your network or credentials.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  const handleLogout = async () => {
+    if (token) {
+      fetch('/api/admin/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    setToken('');
     setIsAuthenticated(false);
     setRecords([]);
   };
@@ -71,6 +108,25 @@ export const AdminConsoleView: React.FC = () => {
     setIsLoading(true);
     setFetchError('');
     try {
+      // 1. Primary authenticated server-side API request
+      if (token) {
+        const res = await fetch('/api/admin/records', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ok && Array.isArray(data.records)) {
+            setRecords(data.records);
+            return;
+          }
+        } else if (res.status === 401) {
+          handleLogout();
+          setAuthError('Session expired. Please sign in again.');
+          return;
+        }
+      }
+
+      // 2. Direct Firestore fallback query
       const colRef = collection(db, 'sync_backups');
       const q = query(colRef, limit(500));
       const snap = await getDocs(q);
@@ -106,7 +162,7 @@ export const AdminConsoleView: React.FC = () => {
     if (isAuthenticated) {
       loadRecords();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, token]);
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -115,7 +171,12 @@ export const AdminConsoleView: React.FC = () => {
   };
 
   const returnToApp = () => {
-    window.location.hash = '';
+    if (window.location.hash) {
+      window.location.hash = '';
+    }
+    if (window.location.pathname.includes('hzadmin') || window.location.search.includes('hzadmin')) {
+      window.location.href = '/';
+    }
   };
 
   // Simple filter across sync code, sobriety date, sponsor, and fellowships
@@ -163,7 +224,7 @@ export const AdminConsoleView: React.FC = () => {
             </button>
           </div>
 
-          <form onSubmit={handleLogin} className="flex flex-col gap-3">
+          <form onSubmit={handleLogin} className="flex flex-col gap-3.5">
             <div>
               <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-white/60 mb-1">
                 Admin Email
@@ -171,26 +232,63 @@ export const AdminConsoleView: React.FC = () => {
               <input
                 type="email"
                 required
-                placeholder="admin@example.com"
+                placeholder="cobaltmacawgames@gmail.com"
                 value={inputEmail}
                 onChange={(e) => setInputEmail(e.target.value)}
-                className="w-full bg-[#111613] border border-[#2d3b31] focus:border-[#4ade80] rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none"
+                className="w-full bg-[#111613] border border-[#2d3b31] focus:border-[#4ade80] rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none transition-colors"
               />
             </div>
 
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-white/60">
+                  Security Passkey
+                </label>
+                <span className="text-[9px] text-white/40 font-mono flex items-center gap-1">
+                  <KeyRound className="w-2.5 h-2.5" /> Passkey Required
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPasskey ? 'text' : 'password'}
+                  required
+                  placeholder="Enter admin passkey"
+                  value={inputPasskey}
+                  onChange={(e) => setInputPasskey(e.target.value)}
+                  className="w-full bg-[#111613] border border-[#2d3b31] focus:border-[#4ade80] rounded-xl px-3 py-2 pr-9 text-xs text-white placeholder-white/20 focus:outline-none transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasskey(!showPasskey)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 p-0.5 cursor-pointer"
+                  title={showPasskey ? 'Hide passkey' : 'Show passkey'}
+                >
+                  {showPasskey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-white/40 mt-1.5 leading-relaxed">
+                Server-side verified with rate limiting and brute-force lockout.
+              </p>
+            </div>
+
             {authError && (
-              <div className="p-2.5 bg-red-950/40 border border-red-800/50 rounded-xl text-red-200 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                <span>{authError}</span>
+              <div className="p-2.5 bg-red-950/50 border border-red-800/60 rounded-xl text-red-200 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+                <span className="leading-snug">{authError}</span>
               </div>
             )}
 
             <button
               type="submit"
-              className="mt-1 w-full py-2 px-4 bg-[#3e6355] hover:bg-[#487363] text-white font-sans text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+              disabled={isSubmitting}
+              className="mt-1 w-full py-2.5 px-4 bg-[#3e6355] hover:bg-[#487363] disabled:opacity-50 text-white font-sans text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Sign In</span>
+              {isSubmitting ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Lock className="w-3.5 h-3.5" />
+              )}
+              <span>{isSubmitting ? 'Authenticating...' : 'Sign In'}</span>
             </button>
           </form>
         </div>

@@ -5,9 +5,13 @@
 
 import express from 'express';
 import path from 'path';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore, collection, getDocs, limit, query } from 'firebase/firestore/lite';
 import dotenv from 'dotenv';
+import firebaseConfig from './firebase-applet-config.json';
 
 dotenv.config();
 
@@ -18,6 +22,30 @@ const PORT = 3000;
 
 // Lazy initialization of the Gemini client to avoid crashes if the key is missing
 let aiClient: GoogleGenAI | null = null;
+
+// Initialize Firebase for server-side administrative querying
+const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const serverDb = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
+  ? getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId)
+  : getFirestore(firebaseApp);
+
+// Administrative Security Configuration
+const AUTHORIZED_ADMIN_EMAIL = 'cobaltmacawgames@gmail.com';
+const DEFAULT_ADMIN_PASSKEY = 'Horizon#Admin2026!';
+
+// In-memory store for active admin sessions: token -> { email, expiresAt }
+const adminSessions = new Map<string, { email: string; expiresAt: number }>();
+
+// In-memory rate limiting for login attempts by IP to prevent brute force
+const adminLoginAttempts = new Map<string, { attempts: number; lockUntil: number }>();
+
+function getRequestIP(req: express.Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket.remoteAddress || 'unknown';
+}
 
 // Simple server-side memory registry to track IP usage per day
 const ipUsageStore = new Map<string, { date: string; count: number }>();
@@ -66,6 +94,120 @@ function getAI() {
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+/**
+ * Admin Console Authentication:
+ * Requires verified admin email AND security passkey (from process.env.ADMIN_ACCESS_KEY or default).
+ * Includes IP brute-force lockout protection.
+ */
+app.post('/api/admin/login', (req, res) => {
+  const ip = getRequestIP(req);
+  const now = Date.now();
+  const lock = adminLoginAttempts.get(ip);
+
+  if (lock && lock.lockUntil > now) {
+    const minutesLeft = Math.ceil((lock.lockUntil - now) / 60000);
+    return res.status(429).json({ 
+      error: `Too many failed attempts. Console locked for ${minutesLeft} minute(s) for security.` 
+    });
+  }
+
+  const { email, passkey } = req.body || {};
+  const targetPasskey = process.env.ADMIN_ACCESS_KEY || DEFAULT_ADMIN_PASSKEY;
+
+  const emailMatches = typeof email === 'string' && email.trim().toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase();
+  const passkeyMatches = typeof passkey === 'string' && passkey.trim() === targetPasskey.trim();
+
+  if (!emailMatches || !passkeyMatches) {
+    const current = lock && lock.lockUntil <= now ? { attempts: 0, lockUntil: 0 } : (lock || { attempts: 0, lockUntil: 0 });
+    current.attempts += 1;
+    if (current.attempts >= 5) {
+      current.lockUntil = now + 15 * 60 * 1000; // 15-minute lock
+      adminLoginAttempts.set(ip, current);
+      return res.status(429).json({ 
+        error: 'Too many failed login attempts. Access is locked for 15 minutes.' 
+      });
+    }
+    adminLoginAttempts.set(ip, current);
+    const attemptsLeft = 5 - current.attempts;
+    return res.status(401).json({ 
+      error: `Invalid credentials. (${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining before temporary lock)` 
+    });
+  }
+
+  // Clear failed attempt tracking upon successful authentication
+  adminLoginAttempts.delete(ip);
+
+  // Issue cryptographic session token valid for 4 hours
+  const token = crypto.randomUUID();
+  const expiresAt = now + 4 * 60 * 60 * 1000;
+  adminSessions.set(token, {
+    email: AUTHORIZED_ADMIN_EMAIL,
+    expiresAt,
+  });
+
+  return res.json({
+    ok: true,
+    token,
+    email: AUTHORIZED_ADMIN_EMAIL,
+    expiresAt,
+  });
+});
+
+app.post('/api/admin/logout', (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (token) {
+    adminSessions.delete(token);
+  }
+  res.json({ ok: true });
+});
+
+/**
+ * Admin Console Records Retrieval:
+ * Secure server-side query to Firestore, strictly gated by the verified admin session token.
+ */
+app.get('/api/admin/records', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const now = Date.now();
+
+  const session = token ? adminSessions.get(token) : null;
+  if (!session || session.expiresAt < now) {
+    if (token) adminSessions.delete(token);
+    return res.status(401).json({ 
+      error: 'Unauthorized or session expired. Please sign in with your admin credentials.' 
+    });
+  }
+
+  try {
+    const colRef = collection(serverDb, 'sync_backups');
+    const q = query(colRef, limit(500));
+    const snap = await getDocs(q);
+
+    const items: any[] = [];
+    snap.forEach((d) => {
+      const raw = d.data();
+      items.push({
+        syncCode: raw.syncCode || d.id,
+        data: raw.data || {},
+        updatedAt: raw.updatedAt,
+        version: raw.version,
+      });
+    });
+
+    items.sort((a, b) => {
+      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    res.json({ ok: true, records: items });
+  } catch (err: any) {
+    console.error('[Admin Server API] Failed to fetch sync records:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch recovery records' });
+  }
 });
 
 /**

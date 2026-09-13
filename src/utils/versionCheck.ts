@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-export const APP_VERSION = '2.2.12';
+export const APP_VERSION = '2.3.4';
 const STORAGE_KEY = 'horizon_app_version';
 
 /**

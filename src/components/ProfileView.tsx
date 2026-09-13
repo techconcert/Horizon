@@ -782,7 +782,7 @@ export const ProfileView: React.FC = () => {
       {/* App License & Version Footer */}
       <footer className="text-center py-4 text-xs font-sans text-black/40 space-y-2">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-          <p className="font-medium text-black/50">Horizon v2.3.2</p>
+          <p className="font-medium text-black/50">Horizon v2.3.4</p>
           <span className="hidden sm:inline text-black/20">•</span>
           <button
             type="button"
