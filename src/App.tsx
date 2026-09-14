@@ -163,7 +163,6 @@ const HorizonContent: React.FC = () => {
     : isEs
     ? 'La recuperación nunca se recorre solo. Si estás luchando con un deseo, sientes ansiedad o necesitas que te escuchen, recuerda que mereces conectar.'
     : 'A recuperação nunca é percorrida sozinho. Se você está lutando contra um desejo, sentindo ansiedade ou precisa de um ouvido amigo, lembre-se de que é digno de conexão.';
-  const callText = isEn ? 'Call Support Helpline (988)' : isEs ? 'Línea de Apoyo 988' : 'Linha de Apoio (988)';
   const serenityText = isEn 
     ? '"God, grant me the serenity to accept the things I cannot change, courage to change the things I can, and wisdom to know the difference."'
     : isEs
@@ -206,41 +205,23 @@ const HorizonContent: React.FC = () => {
         />
       </div>
 
-      {/* Persistent Top-Right Action: Reach Out ONLY (the only sticky button) */}
-      <div
-        className="fixed z-50 transition-all"
-        style={{
-          top: 'max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.35rem))',
-          right: 'max(1rem, calc(env(safe-area-inset-right, 0px) + 0.75rem))'
-        }}
-      >
-        <button
-          onClick={() => setShowSOSModal(true)}
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center select-none bg-red-800 hover:bg-red-700 active:bg-red-900 text-white border border-red-900/30 shadow-md transition-all cursor-pointer touch-manipulation active:scale-95 min-w-[36px] min-h-[36px]"
-          title={reachOutTitle}
-          aria-label={reachOutTitle}
-        >
-          <HeartHandshake className="w-4.5 h-4.5 text-white stroke-[2.2]" />
-        </button>
-      </div>
-
-      {/* Top Header Navigation Bar (non-sticky, scrolls with page) */}
+      {/* Top Header Navigation Bar (horizontally aligned brand, indicator, and action icons) */}
       <header
         className="relative w-full z-40 px-4 md:px-8 pb-3 flex items-center justify-between bg-transparent"
         style={{ paddingTop: 'max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.35rem))' }}
       >
-        <div className="flex flex-col">
+        <div className="flex items-center gap-2">
           <h1
-            className="font-serif text-2xl md:text-3xl text-[#143224] font-semibold tracking-tight"
+            className="font-serif text-2xl md:text-3xl text-[#143224] font-bold tracking-tight select-none"
             style={{
-              WebkitTextStroke: '0.65px rgba(255, 255, 255, 0.95)',
+              WebkitTextStroke: '0.75px rgba(255, 255, 255, 0.95)',
               paintOrder: 'stroke fill',
-              textShadow: '0 0 1px rgba(255,255,255,0.95), 0 1px 2px rgba(255,255,255,0.8)',
+              textShadow: '0 0 2px rgba(255, 255, 255, 0.95), 0 1px 3px rgba(255, 255, 255, 0.85)',
             }}
           >
             {getTranslation('app_title')}
           </h1>
-          <span className="hidden md:inline-block font-sans text-[10px] font-bold text-[#143224]/70 tracking-widest uppercase mt-0.5">
+          <span className="hidden md:inline-block font-sans text-[10px] font-bold text-[#143224]/70 tracking-widest uppercase ml-1">
             {getTranslation('step_chip')}
           </span>
         </div>
@@ -248,34 +229,44 @@ const HorizonContent: React.FC = () => {
         {/* Centered Step Indicator (Plain text only, centered in top bar) */}
         {(state.activeTab === 'trackers' || state.activeTab === 'meditation') && (
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
-            <span className="font-sans text-[9px] sm:text-[10px] font-bold tracking-[0.2em] uppercase text-[#143224]/75 select-none">
+            <span className="font-sans text-[9px] sm:text-[10px] font-bold tracking-[0.2em] uppercase text-[#143224]/80 select-none">
               {state.activeTab === 'trackers' && (isEn ? 'STEP 10' : isEs ? 'PASO 10' : 'PASSO 10')}
               {state.activeTab === 'meditation' && (isEn ? 'STEP 11' : isEs ? 'PASO 11' : 'PASSO 11')}
             </span>
           </div>
         )}
 
-        {/* Right Actions: Cloud Sync & Settings/Profile (non-sticky, scrolls with header, leaving room for fixed Reach Out button) */}
-        <div className="flex items-center gap-2 pr-11">
+        {/* Right Actions: Cloud Sync, Settings/Profile & Reach Out */}
+        <div className="flex items-center gap-2">
           {state.syncEnabled && (
-            <div className="hidden sm:flex items-center gap-1.5 text-[#143224] bg-[#E5E1DB]/90 backdrop-blur-xs border border-[#143224]/10 rounded-full px-3 py-1 text-[9px] font-bold tracking-widest uppercase shadow-2xs">
+            <div className="hidden sm:flex items-center gap-1.5 text-[#143224] bg-[#E5E1DB]/90 backdrop-blur-xs border border-[#143224]/10 rounded-full px-2.5 py-1 text-[9px] font-bold tracking-widest uppercase shadow-2xs">
               <RefreshCw className="w-2.5 h-2.5 animate-spin-slow" />
               <span>{isEn ? 'Synced' : isEs ? 'Sincronizado' : 'Sincronizado'}</span>
             </div>
           )}
 
-          {/* Settings / Profile button (non-sticky) */}
+          {/* Settings / Profile button */}
           <button
             onClick={() => setActiveTab('profile')}
-            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center select-none border transition-all cursor-pointer shadow-xs touch-manipulation ${
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center select-none border transition-all cursor-pointer shadow-xs touch-manipulation shrink-0 ${
               state.activeTab === 'profile'
-                ? 'bg-[#3e6355] border-[#3e6355] text-[#F8F5F2] scale-105 ring-2 ring-[#3e6355]/30'
+                ? 'bg-[#3e6355] border-[#3e6355] text-[#F8F5F2] ring-2 ring-[#3e6355]/30'
                 : 'bg-[#183628] border-[#183628] text-[#F8F5F2] hover:bg-[#254d3b]'
             }`}
             title={isEn ? 'Settings' : isEs ? 'Ajustes' : 'Configurações'}
             aria-label={isEn ? 'Settings' : isEs ? 'Ajustes' : 'Configurações'}
           >
             <User className="w-4.5 h-4.5" />
+          </button>
+
+          {/* Reach Out Support button */}
+          <button
+            onClick={() => setShowSOSModal(true)}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center select-none bg-red-800 hover:bg-red-700 active:bg-red-900 text-white border border-red-900/30 shadow-xs transition-all cursor-pointer touch-manipulation active:scale-95 shrink-0"
+            title={reachOutTitle}
+            aria-label={reachOutTitle}
+          >
+            <HeartHandshake className="w-4.5 h-4.5 text-white stroke-[2.2]" />
           </button>
         </div>
       </header>
@@ -350,23 +341,25 @@ const HorizonContent: React.FC = () => {
             </p>
 
             <div className="flex flex-col gap-3">
-              {/* Support Helpline Call */}
-              <a
-                href={`tel:${state.supportNumber || '988'}`}
-                className="flex items-center justify-between p-3.5 bg-red-950/5 text-red-900 hover:bg-red-950/10 rounded-2xl border border-red-900/20 transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Phone className="w-4 h-4 shrink-0 text-red-900" />
-                  <div className="flex flex-col items-start">
-                    <span className="font-sans text-xs font-bold uppercase tracking-widest text-red-900">
-                      {isEn ? 'Support Helpline' : isEs ? 'Línea de Apoyo' : 'Linha de Apoio'}
-                    </span>
-                    <span className="font-mono text-[10px] opacity-70">
-                      {state.supportNumber || '988'}
-                    </span>
+              {/* Support Helpline Call (Only rendered if configured by user) */}
+              {state.supportNumber?.trim() && (
+                <a
+                  href={`tel:${state.supportNumber.trim()}`}
+                  className="flex items-center justify-between p-3.5 bg-red-950/5 text-red-900 hover:bg-red-950/10 rounded-2xl border border-red-900/20 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Phone className="w-4 h-4 shrink-0 text-red-900" />
+                    <div className="flex flex-col items-start">
+                      <span className="font-sans text-xs font-bold uppercase tracking-widest text-red-900">
+                        {isEn ? 'Support Helpline' : isEs ? 'Línea de Apoyo' : 'Linha de Apoio'}
+                      </span>
+                      <span className="font-mono text-[10px] opacity-70">
+                        {state.supportNumber.trim()}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </a>
+                </a>
+              )}
 
               {/* Sponsor Call */}
               {state.sponsorNumber && (
@@ -419,6 +412,19 @@ const HorizonContent: React.FC = () => {
                     {isEn ? '24/7 Live' : isEs ? '24/7 En Vivo' : '24/7 Ao Vivo'}
                   </span>
                 </a>
+              )}
+
+              {/* Notice if no direct contact links have been configured */}
+              {!state.supportNumber?.trim() && !state.sponsorNumber?.trim() && !state.supportLink?.trim() && (
+                <div className="p-3.5 bg-black/5 rounded-2xl border border-black/10 text-center">
+                  <p className="font-sans text-xs text-black/60 leading-relaxed">
+                    {isEn
+                      ? 'No personal support contacts configured yet. You can add a helpline, sponsor, or meeting room link anytime in Profile settings.'
+                      : isEs
+                      ? 'Aún no hay contactos de apoyo configurados. Puedes agregar una línea de ayuda, padrino o enlace en tu Perfil.'
+                      : 'Nenhum contato de apoio configurado ainda. Você pode adicionar uma linha de apoio, padrinho ou link no seu Perfil.'}
+                  </p>
+                </div>
               )}
 
               {/* Serenity Prayer block */}

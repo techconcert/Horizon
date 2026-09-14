@@ -190,21 +190,19 @@ export async function saveToCloud(
       return { success: true, unchanged: true };
     }
 
-    // 4. Deduplication: Skip write if recovery state is 100% identical to last successful sync
-    if (typeof window !== 'undefined') {
+    // 4. Deduplication: Skip write for automated background sync if recovery state is 100% identical to last successful sync
+    if (typeof window !== 'undefined' && !isExplicitUserAction) {
       const lastPayloadStr = localStorage.getItem(LAST_PAYLOAD_HASH_KEY);
       if (lastPayloadStr === uncompressedStr) {
         return { success: true, unchanged: true };
       }
 
       // 5. Throttling for automated background sync to protect the 20,000 writes/day free tier quota
-      if (!isExplicitUserAction) {
-        const lastWriteTimeStr = localStorage.getItem(LAST_WRITE_TIME_KEY);
-        if (lastWriteTimeStr) {
-          const lastWriteTime = parseInt(lastWriteTimeStr, 10);
-          if (!isNaN(lastWriteTime) && Date.now() - lastWriteTime < MIN_AUTO_SYNC_INTERVAL_MS) {
-            return { success: true, throttled: true };
-          }
+      const lastWriteTimeStr = localStorage.getItem(LAST_WRITE_TIME_KEY);
+      if (lastWriteTimeStr) {
+        const lastWriteTime = parseInt(lastWriteTimeStr, 10);
+        if (!isNaN(lastWriteTime) && Date.now() - lastWriteTime < MIN_AUTO_SYNC_INTERVAL_MS) {
+          return { success: true, throttled: true };
         }
       }
     }

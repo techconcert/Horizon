@@ -591,7 +591,7 @@ export const ProfileView: React.FC = () => {
                     type="text"
                     value={state.supportNumber}
                     onChange={(e) => setSupportNumber(e.target.value)}
-                    placeholder="e.g. 988"
+                    placeholder="e.g. 1-800-662-4357"
                     className="w-full bg-[#F8F5F2] border border-black/15 rounded-2xl pl-10 pr-3.5 py-2.5 font-sans text-xs focus:outline-none focus:border-black text-[#111111]"
                   />
                 </div>
@@ -782,7 +782,7 @@ export const ProfileView: React.FC = () => {
       {/* App License & Version Footer */}
       <footer className="text-center py-4 text-xs font-sans text-black/40 space-y-2">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-          <p className="font-medium text-black/50">Horizon v2.3.8</p>
+          <p className="font-medium text-black/50">Horizon v2.4.6</p>
           <span className="hidden sm:inline text-black/20">•</span>
           <button
             type="button"

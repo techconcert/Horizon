@@ -382,7 +382,7 @@ export const OnboardingView: React.FC = () => {
                       type="text"
                       value={localSupportNum}
                       onChange={(e) => setLocalSupportNum(e.target.value)}
-                      placeholder="e.g. 988"
+                      placeholder="e.g. 1-800-662-4357"
                       className="w-full bg-[#F8F5F2] border border-black/15 rounded-lg py-1.5 pl-8 pr-2.5 font-sans text-xs text-black focus:outline-none focus:border-black"
                     />
                   </div>

@@ -401,10 +401,10 @@ export const TrackersView: React.FC = () => {
         Español: 'La recuperación nunca se recorre solo. Si estás luchando con un deseo, sientes ansiedad o necesitas que te escuchen, recuerda que mereces conectar.',
         Português: 'A recuperação nunca é percorrida sozinho. Se você está lutando contra um desejo, sentindo ansiedade ou precisa de um ouvido amigo, lembre-se de que é digno de conexão.'
       },
-      call_988: {
-        English: 'Call Support Helpline (988)',
-        Español: 'Línea de Apoyo 988',
-        Português: 'Linha de Apoio (988)'
+      call_helpline: {
+        English: 'Call Support Helpline',
+        Español: 'Línea de Apoyo',
+        Português: 'Linha de Apoio'
       },
       national_247: {
         English: '24/7 National',

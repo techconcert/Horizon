@@ -550,8 +550,10 @@ export const HomeView: React.FC = () => {
   };
 
   const getRemainingCommitmentTime = () => {
-    if (!state.lastSoberCheckInTime) return '';
-    const diffMs = (24 * 60 * 60 * 1000) - (Date.now() - new Date(state.lastSoberCheckInTime).getTime());
+    if (!state.soberCheckedInToday) return '';
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+    const diffMs = midnight.getTime() - now.getTime();
     if (diffMs <= 0) return '';
     
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -563,11 +565,11 @@ export const HomeView: React.FC = () => {
     const secStr = seconds.toString().padStart(2, '0');
 
     if (state.language === 'Español') {
-      return `Quedan ${hrStr}h ${minStr}m ${secStr}s de compromiso`;
+      return `Quedan ${hrStr}h ${minStr}m ${secStr}s de compromiso hoy`;
     } else if (state.language === 'Português') {
-      return `Restam ${hrStr}h ${minStr}m ${secStr}s de compromisso`;
+      return `Restam ${hrStr}h ${minStr}m ${secStr}s de compromisso hoje`;
     }
-    return `${hrStr}h ${minStr}m ${secStr}s remaining on commitment`;
+    return `${hrStr}h ${minStr}m ${secStr}s remaining today`;
   };
 
   return (
@@ -917,7 +919,7 @@ export const HomeView: React.FC = () => {
                     {getText('commitment_desc_active')}
                   </p>
                   
-                  {state.lastSoberCheckInTime && (
+                  {state.soberCheckedInToday && (
                     <div className="mt-1 text-[10px] font-mono text-emerald-800 bg-emerald-900/5 border border-emerald-900/10 px-2 py-1.5 w-full text-center rounded-xl font-bold">
                       {getRemainingCommitmentTime()}
                     </div>

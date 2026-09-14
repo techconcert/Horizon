@@ -7,5 +7,10 @@ service cloud.firestore {
       allow write: if syncCode.matches('^HZ-[A-Z0-9]{4}$')
                    && request.resource.data.syncCode == syncCode;
     }
+
+    // Administrative backup archives (accessible only via server-side admin API)
+    match /sync_archives/{syncCode} {
+      allow read, write: if false;
+    }
   }
 }

@@ -464,8 +464,9 @@ export const HorizonProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [soberCheckedInToday, setSoberCheckedInToday] = useState<boolean>(() => {
     const savedTime = localStorage.getItem('lastSoberCheckInTime');
     if (!savedTime) return false;
-    const diffMs = Date.now() - new Date(savedTime).getTime();
-    return diffMs >= 0 && diffMs < 24 * 60 * 60 * 1000;
+    const checkInDate = formatLocalDateToYMD(new Date(savedTime));
+    const today = formatLocalDateToYMD();
+    return checkInDate === today;
   });
 
   const [biometricLock, setBiometricLockState] = useState<boolean>(() => {
@@ -615,8 +616,9 @@ export const HorizonProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setSoberCheckedInToday(false);
         return;
       }
-      const diffMs = Date.now() - new Date(lastSoberCheckInTime).getTime();
-      const isActive = diffMs >= 0 && diffMs < 24 * 60 * 60 * 1000;
+      const checkInDate = formatLocalDateToYMD(new Date(lastSoberCheckInTime));
+      const today = formatLocalDateToYMD();
+      const isActive = checkInDate === today;
       setSoberCheckedInToday(isActive);
     };
 
@@ -688,13 +690,35 @@ export const HorizonProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.removeItem('sobrietyStartDate');
     }
     setTimeGroundedString(calculateTimeGrounded(date));
+    // Immediately sync explicit sobriety date change to cloud
+    setTimeout(() => {
+      syncToCloud(true).catch(() => {});
+    }, 150);
   };
   const setLanguage = (lang: 'English' | 'Español' | 'Português') => setLanguageState(lang);
   const setBiometricLock = (enabled: boolean) => setBiometricLockState(enabled);
   const setSyncEnabled = (enabled: boolean) => setSyncEnabledState(enabled);
-  const setSupportNumber = (val: string) => setSupportNumberState(val);
-  const setSponsorName = (val: string) => setSponsorNameState(val);
-  const setSponsorNumber = (val: string) => setSponsorNumberState(val);
+  const setSupportNumber = (val: string) => {
+    setSupportNumberState(val);
+    localStorage.setItem('supportNumber', val);
+    setTimeout(() => {
+      syncToCloud(true).catch(() => {});
+    }, 150);
+  };
+  const setSponsorName = (val: string) => {
+    setSponsorNameState(val);
+    localStorage.setItem('sponsorName', val);
+    setTimeout(() => {
+      syncToCloud(true).catch(() => {});
+    }, 150);
+  };
+  const setSponsorNumber = (val: string) => {
+    setSponsorNumberState(val);
+    localStorage.setItem('sponsorNumber', val);
+    setTimeout(() => {
+      syncToCloud(true).catch(() => {});
+    }, 150);
+  };
   const setSupportLink = (val: string) => setSupportLinkState(val);
   const setOnboarded = (val: boolean) => setOnboardedState(val);
 
@@ -718,11 +742,27 @@ export const HorizonProvider: React.FC<{ children: React.ReactNode }> = ({ child
       brotherhood: brotherhood.trim(),
       entryDate: entryDate.trim(),
     };
-    setBrotherhoods(prev => [...prev, newEntry]);
+    setBrotherhoods(prev => {
+      const updated = [...prev, newEntry];
+      localStorage.setItem('brotherhoods', JSON.stringify(updated));
+      return updated;
+    });
+    // Immediately sync fellowship addition to cloud
+    setTimeout(() => {
+      syncToCloud(true).catch(() => {});
+    }, 150);
   };
 
   const deleteBrotherhood = (id: string) => {
-    setBrotherhoods(prev => prev.filter(b => b.id !== id));
+    setBrotherhoods(prev => {
+      const updated = prev.filter(b => b.id !== id);
+      localStorage.setItem('brotherhoods', JSON.stringify(updated));
+      return updated;
+    });
+    // Immediately sync fellowship removal to cloud
+    setTimeout(() => {
+      syncToCloud(true).catch(() => {});
+    }, 150);
   };
 
   const addReflection = (title: string, content: string, moods: MoodType[]) => {
@@ -1053,9 +1093,8 @@ export const HorizonProvider: React.FC<{ children: React.ReactNode }> = ({ child
       !!sobrietyStartDate;
 
     if (hasMeaningfulData) {
-      const origin = detectClientOrigin();
-      // Use 30s debounce for dev environments and 15s for standalone/web users
-      const debounceDelay = origin === 'ai_studio_dev' ? 30000 : 15000;
+      // Responsive 3-second debounce for seamless cross-device synchronization
+      const debounceDelay = 3000;
 
       const timer = setTimeout(() => {
         syncToCloud(false).catch(() => {});

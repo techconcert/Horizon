@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, limit, query } from 'firebase/firestore/lite';
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc, limit, query } from 'firebase/firestore/lite';
 import LZString from 'lz-string';
 import dotenv from 'dotenv';
 import firebaseConfig from './firebase-applet-config.json';
@@ -165,11 +165,7 @@ app.post('/api/admin/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-/**
- * Admin Console Records Retrieval:
- * Secure server-side query to Firestore, strictly gated by the verified admin session token.
- */
-app.get('/api/admin/records', async (req, res) => {
+function getAdminSession(req: express.Request): { email: string; expiresAt: number } | null {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
   const now = Date.now();
@@ -177,49 +173,283 @@ app.get('/api/admin/records', async (req, res) => {
   const session = token ? adminSessions.get(token) : null;
   if (!session || session.expiresAt < now) {
     if (token) adminSessions.delete(token);
+    return null;
+  }
+  return session;
+}
+
+/**
+ * Admin Console Records Retrieval:
+ * Secure server-side query to Firestore, strictly gated by the verified admin session token.
+ * Returns active compressed records (v2), legacy records (v1), and archived records.
+ */
+app.get('/api/admin/records', async (req, res) => {
+  const session = getAdminSession(req);
+  if (!session) {
     return res.status(401).json({ 
       error: 'Unauthorized or session expired. Please sign in with your admin credentials.' 
     });
   }
 
   try {
+    // 1. Fetch active backups
     const colRef = collection(serverDb, 'sync_backups');
     const q = query(colRef, limit(500));
     const snap = await getDocs(q);
 
-    const items: any[] = [];
+    const records: any[] = [];
+    const legacyRecords: any[] = [];
+
     snap.forEach((d) => {
       const raw = d.data();
-      let payload = raw.data || {};
+      if (raw.compressed && typeof raw.cdata === 'string') {
+        let payload: any = {};
+        try {
+          const decompressed = LZString.decompressFromBase64(raw.cdata);
+          if (decompressed) {
+            payload = JSON.parse(decompressed);
+          }
+        } catch (e) {
+          console.error(`[Admin Server API] Failed to decompress record ${d.id}:`, e);
+        }
+
+        records.push({
+          syncCode: raw.syncCode || d.id,
+          data: payload,
+          updatedAt: raw.updatedAt,
+          version: raw.version || 2,
+          origin: raw.origin || 'unknown',
+          appVersion: raw.appVersion || 'unknown',
+          compressed: true,
+          rawBytes: raw.rawBytes || 0,
+          compressedBytes: raw.compressedBytes || 0,
+        });
+      } else if (raw.data || raw.version === 1) {
+        // Legacy uncompressed records
+        legacyRecords.push({
+          syncCode: raw.syncCode || d.id,
+          data: raw.data || {},
+          updatedAt: raw.updatedAt,
+          version: 1,
+          origin: raw.origin || 'legacy_v1',
+          appVersion: raw.appVersion || 'legacy',
+          compressed: false,
+          rawBytes: JSON.stringify(raw.data || {}).length,
+          compressedBytes: JSON.stringify(raw.data || {}).length,
+        });
+      }
+    });
+
+    // 2. Fetch archived backups
+    const archiveColRef = collection(serverDb, 'sync_archives');
+    const archiveQ = query(archiveColRef, limit(500));
+    const archiveSnap = await getDocs(archiveQ);
+
+    const archivedRecords: any[] = [];
+    archiveSnap.forEach((d) => {
+      const raw = d.data();
+      let payload: any = {};
       if (raw.compressed && typeof raw.cdata === 'string') {
         try {
           const decompressed = LZString.decompressFromBase64(raw.cdata);
           if (decompressed) payload = JSON.parse(decompressed);
-        } catch {}
+        } catch (e) {
+          console.error(`[Admin Server API] Failed to decompress archived record ${d.id}:`, e);
+        }
+      } else if (raw.data) {
+        payload = raw.data;
       }
-      items.push({
+
+      archivedRecords.push({
         syncCode: raw.syncCode || d.id,
         data: payload,
         updatedAt: raw.updatedAt,
-        version: raw.version,
+        archivedAt: raw.archivedAt,
+        archivedBy: raw.archivedBy,
+        version: raw.version || 2,
         origin: raw.origin || 'unknown',
-        appVersion: raw.appVersion || 'legacy',
+        appVersion: raw.appVersion || 'unknown',
         compressed: !!raw.compressed,
-        rawBytes: raw.rawBytes,
-        compressedBytes: raw.compressedBytes,
+        rawBytes: raw.rawBytes || 0,
+        compressedBytes: raw.compressedBytes || 0,
       });
     });
 
-    items.sort((a, b) => {
+    const sortByTime = (a: any, b: any) => {
       const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
       const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
       return timeB - timeA;
+    };
+
+    records.sort(sortByTime);
+    legacyRecords.sort(sortByTime);
+    archivedRecords.sort((a, b) => {
+      const timeA = a.archivedAt ? new Date(a.archivedAt).getTime() : 0;
+      const timeB = b.archivedAt ? new Date(b.archivedAt).getTime() : 0;
+      return timeB - timeA;
     });
 
-    res.json({ ok: true, records: items });
+    res.json({ ok: true, records, legacyRecords, archivedRecords });
   } catch (err: any) {
     console.error('[Admin Server API] Failed to fetch sync records:', err);
     res.status(500).json({ error: err.message || 'Failed to fetch recovery records' });
+  }
+});
+
+/**
+ * Archive a record (Safe Soft Delete):
+ * Moves the document from `sync_backups` to `sync_archives` with an archivedAt timestamp and admin identity.
+ */
+app.post('/api/admin/archive', async (req, res) => {
+  const session = getAdminSession(req);
+  if (!session) {
+    return res.status(401).json({ error: 'Unauthorized or session expired.' });
+  }
+
+  const { syncCode } = req.body || {};
+  if (!syncCode || typeof syncCode !== 'string') {
+    return res.status(400).json({ error: 'Valid syncCode is required.' });
+  }
+
+  const normalized = syncCode.trim().toUpperCase();
+  try {
+    const backupDocRef = doc(serverDb, 'sync_backups', normalized);
+    const snap = await getDoc(backupDocRef);
+
+    if (!snap.exists()) {
+      return res.status(404).json({ error: `Record ${normalized} not found in active backups.` });
+    }
+
+    const docData = snap.data();
+    const archiveData = {
+      ...docData,
+      syncCode: normalized,
+      archivedAt: new Date().toISOString(),
+      archivedBy: session.email,
+    };
+
+    // 1. Write to archive collection
+    const archiveDocRef = doc(serverDb, 'sync_archives', normalized);
+    await setDoc(archiveDocRef, archiveData);
+
+    // 2. Remove from active backups collection
+    await deleteDoc(backupDocRef);
+
+    console.log(`[Admin Server API] Successfully archived ${normalized} by ${session.email}`);
+    res.json({ ok: true, syncCode: normalized, archivedAt: archiveData.archivedAt });
+  } catch (err: any) {
+    console.error(`[Admin Server API] Error archiving record ${normalized}:`, err);
+    res.status(500).json({ error: err.message || 'Failed to archive record' });
+  }
+});
+
+/**
+ * Restore an archived record back to active backups.
+ */
+app.post('/api/admin/restore-archive', async (req, res) => {
+  const session = getAdminSession(req);
+  if (!session) {
+    return res.status(401).json({ error: 'Unauthorized or session expired.' });
+  }
+
+  const { syncCode } = req.body || {};
+  if (!syncCode || typeof syncCode !== 'string') {
+    return res.status(400).json({ error: 'Valid syncCode is required.' });
+  }
+
+  const normalized = syncCode.trim().toUpperCase();
+  try {
+    const archiveDocRef = doc(serverDb, 'sync_archives', normalized);
+    const snap = await getDoc(archiveDocRef);
+
+    if (!snap.exists()) {
+      return res.status(404).json({ error: `Record ${normalized} not found in archive vault.` });
+    }
+
+    const archiveData = snap.data();
+    const backupData: Record<string, any> = { ...archiveData };
+    delete backupData.archivedAt;
+    delete backupData.archivedBy;
+
+    // 1. Write back to sync_backups
+    const backupDocRef = doc(serverDb, 'sync_backups', normalized);
+    await setDoc(backupDocRef, backupData);
+
+    // 2. Remove from archive
+    await deleteDoc(archiveDocRef);
+
+    console.log(`[Admin Server API] Successfully restored ${normalized} to active backups by ${session.email}`);
+    res.json({ ok: true, syncCode: normalized });
+  } catch (err: any) {
+    console.error(`[Admin Server API] Error restoring archived record ${normalized}:`, err);
+    res.status(500).json({ error: err.message || 'Failed to restore archived record' });
+  }
+});
+
+/**
+ * Permanently Delete a record from active backups OR archive vault.
+ */
+app.post('/api/admin/delete', async (req, res) => {
+  const session = getAdminSession(req);
+  if (!session) {
+    return res.status(401).json({ error: 'Unauthorized or session expired.' });
+  }
+
+  const { syncCode, fromArchive } = req.body || {};
+  if (!syncCode || typeof syncCode !== 'string') {
+    return res.status(400).json({ error: 'Valid syncCode is required.' });
+  }
+
+  const normalized = syncCode.trim().toUpperCase();
+  const collectionName = fromArchive ? 'sync_archives' : 'sync_backups';
+
+  try {
+    const targetRef = doc(serverDb, collectionName, normalized);
+    const snap = await getDoc(targetRef);
+
+    if (!snap.exists()) {
+      return res.status(404).json({ error: `Record ${normalized} not found in ${collectionName}.` });
+    }
+
+    await deleteDoc(targetRef);
+
+    console.log(`[Admin Server API] PERMANENTLY DELETED ${normalized} from ${collectionName} by ${session.email}`);
+    res.json({ ok: true, syncCode: normalized, deletedPermanently: true, from: collectionName });
+  } catch (err: any) {
+    console.error(`[Admin Server API] Error deleting record ${normalized}:`, err);
+    res.status(500).json({ error: err.message || 'Failed to permanently delete record' });
+  }
+});
+
+/**
+ * Purge All Archived Records Permanently.
+ */
+app.post('/api/admin/purge-archive', async (req, res) => {
+  const session = getAdminSession(req);
+  if (!session) {
+    return res.status(401).json({ error: 'Unauthorized or session expired.' });
+  }
+
+  const { confirm } = req.body || {};
+  if (confirm !== true) {
+    return res.status(400).json({ error: 'Explicit confirmation required to empty archive.' });
+  }
+
+  try {
+    const archiveColRef = collection(serverDb, 'sync_archives');
+    const snap = await getDocs(archiveColRef);
+
+    let count = 0;
+    for (const d of snap.docs) {
+      await deleteDoc(d.ref);
+      count++;
+    }
+
+    console.log(`[Admin Server API] PURGED ALL ARCHIVES: ${count} record(s) permanently deleted by ${session.email}`);
+    res.json({ ok: true, purgedCount: count });
+  } catch (err: any) {
+    console.error('[Admin Server API] Error purging archives:', err);
+    res.status(500).json({ error: err.message || 'Failed to purge archived records' });
   }
 });
 
